@@ -15,6 +15,13 @@ export const SEAT_FLOORS = [
   ["E", "F", "G", "H"],
 ];
 
+/** "중등부 1학년 1-1반" 같은 학년반 표기를 좌석 위에 표시할 "1-1반"로 축약. */
+export function abbreviateClass(cls) {
+  if (!cls) return "";
+  const parts = String(cls).trim().split(/\s+/);
+  return parts[parts.length - 1];
+}
+
 /**
  * @param {HTMLElement} container
  * @param {Record<string, {회원ID: string, 이름: string}>} seatStatus - 점유된 좌석만 담긴 맵
@@ -52,17 +59,26 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "seat";
-        btn.textContent = n;
         btn.dataset.seat = seatId;
 
         if (occupant) {
           btn.classList.add("seat--taken");
-          btn.title = occupant.이름 || "";
+          const cls = abbreviateClass(occupant.학년반);
+          const nameEl = document.createElement("span");
+          nameEl.className = "seat__name";
+          nameEl.textContent = occupant.이름 || "";
+          const classEl = document.createElement("span");
+          classEl.className = "seat__class";
+          classEl.textContent = cls;
+          btn.append(nameEl, classEl);
+          btn.title = `${seatId} — ${occupant.이름 || ""} · ${cls}`;
           btn.addEventListener("click", () => onSeatClick(seatId, occupant));
         } else if (seatId === selectedSeat) {
+          btn.textContent = n;
           btn.classList.add("seat--selected");
           btn.addEventListener("click", () => onSeatClick(seatId, null));
         } else {
+          btn.textContent = n;
           btn.classList.add("seat--available");
           if (!selectable) btn.disabled = true;
           else btn.addEventListener("click", () => onSeatClick(seatId, null));

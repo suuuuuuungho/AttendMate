@@ -1,6 +1,6 @@
 # Apps Script 배포 가이드
 
-`Code.gs`를 구글 스프레드시트에 바인딩된 Apps Script로 배포해서, `seats.html`/`scan.html`이 호출할 수 있는 웹 API로 만드는 절차다.
+`Code.gs`를 구글 스프레드시트에 바인딩된 Apps Script로 배포해서, `index.html`이 호출할 수 있는 웹 API로 만드는 절차다.
 
 ## 1. log 탭 헤더 확인
 
@@ -45,7 +45,7 @@ Sheet1의 D열(QR)이 비어있다면:
 
 1. Apps Script 에디터에서 함수 선택 드롭다운을 `fillQrColumn`으로 변경
 2. **실행(▶)** 클릭 → 권한 승인
-3. 완료되면 D열에 각 학생 회원ID를 인코딩한 QR 이미지가 채워진다 (QR 안에는 URL이 아니라 **회원ID 원문**이 들어있음 — `scan.html`이 이 값을 그대로 읽어서 조회한다)
+3. 완료되면 D열에 각 학생 회원ID를 인코딩한 QR 이미지가 채워진다 (QR 안에는 URL이 아니라 **회원ID 원문**이 들어있음)
 
 ## 6. 코드 수정 후 재배포
 

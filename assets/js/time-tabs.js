@@ -1,4 +1,4 @@
-// seats.html / scan.html이 공유하는 타임(1~7부) pill 탭 렌더러.
+// index.html이 사용하는 타임(1~7타임) pill 탭 렌더러.
 export function renderTimeTabs(container, times, current, onSelect) {
   container.innerHTML = "";
   for (const time of times) {
