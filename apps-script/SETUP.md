@@ -51,6 +51,21 @@ Sheet1의 D열(QR)이 비어있다면:
 
 `Code.gs`를 나중에 고치면, 저장만으로는 실제 웹 앱에 반영되지 않는다. **배포 → 배포 관리 → 연필 아이콘(수정) → 버전: 새 버전 → 배포**로 다시 배포해야 한다.
 
+### 자동 배포 (clasp)
+
+이 프로젝트는 [clasp](https://github.com/google/clasp)로 연결되어 있어서, `apps-script/Code.gs`를 고친 뒤 아래 명령으로 push + 재배포까지 한 번에 할 수 있다 (에디터에 수동으로 붙여넣을 필요 없음).
+
+```bash
+cp apps-script/Code.gs apps-script/.clasp-sync/Code.js
+cd apps-script/.clasp-sync
+clasp push
+clasp deploy -i AKfycbyu0GAye89rdHLsCXnfAsz4LgMM9XzLj05smSzisDMg0q82bLn7xTZVGhHPMALADfxQ -d "변경 내용 설명"
+```
+
+- 배포 ID(`-i` 뒤 값)를 그대로 써야 기존 웹앱 URL(`assets/js/config.js`의 `APPS_SCRIPT_URL`)이 그대로 유지된다. 새 배포로 만들면 URL이 바뀌어서 프론트엔드도 같이 수정해야 한다.
+- `apps-script/.clasp-sync/`는 clasp가 관리하는 로컬 미러 폴더로, git에는 커밋하지 않는다(`.gitignore` 처리됨). 소스 오브 트루스는 `apps-script/Code.gs`.
+- 최초 1회 `clasp login` 로그인과 [Apps Script API 활성화](https://script.google.com/home/usersettings)가 되어 있어야 한다.
+
 ## 문제 해결
 
 - **브라우저 콘솔에 CORS 오류**: 배포 시 액세스 권한이 "모든 사용자"인지 다시 확인. "Google 계정이 있는 사용자"로 되어 있으면 익명 fetch가 막힌다.
