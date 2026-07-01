@@ -4,19 +4,22 @@
 
 ## 1. log 탭 헤더 확인
 
-스프레드시트의 `log` 탭 1행(헤더)이 정확히 아래 5개 이름으로 되어 있는지 확인한다 (순서는 상관없음 — 이름으로 찾음):
+스프레드시트의 `log` 탭 1행(헤더)이 정확히 아래 6개 이름으로 되어 있는지 확인한다 (순서는 상관없음 — 이름으로 찾음):
 
 ```
-Timestamp | 회원ID | 이름 | 좌석 | 타임
+Timestamp | 회원ID | 이름 | 학년반 | 좌석 | 타임
 ```
 
 `Sheet1` 탭도 `회원ID / 이름 / 학년반 / QR / 전화번호` 헤더가 있어야 한다.
 
 ## 2. Apps Script 프로젝트 만들기
 
-1. 스프레드시트 열기 → 상단 메뉴 **확장 프로그램 → Apps Script**
+`Code.gs`는 `SpreadsheetApp.openById(SPREADSHEET_ID)`로 스프레드시트를 직접 여는 방식이라, 스프레드시트에 바인딩된 프로젝트(확장 프로그램 → Apps Script)든 script.google.com에서 만든 독립형 프로젝트든 상관없이 동작한다.
+
+1. 스프레드시트 열기 → 상단 메뉴 **확장 프로그램 → Apps Script** (또는 script.google.com에서 새 프로젝트)
 2. 기본 생성된 `Code.gs` 내용을 전부 지우고, 이 저장소의 [`apps-script/Code.gs`](Code.gs) 내용을 그대로 붙여넣기
-3. 저장 (Ctrl+S)
+3. 파일 상단의 `SPREADSHEET_ID`가 실제 사용 중인 스프레드시트 ID와 같은지 확인 (다른 시트를 쓴다면 시트 URL의 `/d/`와 `/edit` 사이 값으로 교체)
+4. 저장 (Ctrl+S)
 
 ## 3. 웹 앱으로 배포
 
@@ -52,6 +55,7 @@ Sheet1의 D열(QR)이 비어있다면:
 
 - **브라우저 콘솔에 CORS 오류**: 배포 시 액세스 권한이 "모든 사용자"인지 다시 확인. "Google 계정이 있는 사용자"로 되어 있으면 익명 fetch가 막힌다.
 - **"컬럼을 찾을 수 없습니다" 오류**: 1단계의 헤더 이름 철자/공백을 다시 확인.
+- **`Cannot read properties of null (reading 'getSheetByName')` 오류**: `SPREADSHEET_ID`가 비어있거나 잘못된 값. 2-3단계에서 ID를 다시 확인하고 재배포.
 - **체크인이 안 됨**: Apps Script 에디터 → 좌측 **실행** 메뉴에서 실제 오류 로그 확인 가능.
 
 ## 알려진 제약

@@ -10,12 +10,12 @@ const MOCK_MEMBERS = [
   { 회원ID: "M006", 이름: "강서준", 학년반: "신입1반" },
 ];
 
-// time -> { seat: {회원ID, 이름} }
+// time -> { seat: {회원ID, 이름, 학년반} }
 const mockSeatLog = {
   "1부": {
-    A3: { 회원ID: "M001", 이름: "김민준" },
-    A4: { 회원ID: "M002", 이름: "이서연" },
-    B12: { 회원ID: "M003", 이름: "박도윤" },
+    A3: { 회원ID: "M001", 이름: "김민준", 학년반: "중등1-1" },
+    A4: { 회원ID: "M002", 이름: "이서연", 학년반: "중등1-1" },
+    B12: { 회원ID: "M003", 이름: "박도윤", 학년반: "중등1-2" },
   },
 };
 
@@ -40,7 +40,7 @@ export function mockGetSeats(time) {
   return { seats: mockSeatLog[time] || {} };
 }
 
-export function mockCheckin({ 회원ID, 이름, 좌석, 타임 }) {
+export function mockCheckin({ 회원ID, 이름, 학년반, 좌석, 타임 }) {
   const seatsForTime = mockSeatLog[타임] || (mockSeatLog[타임] = {});
   if (seatsForTime[좌석]) {
     return { success: false, error: "이미 배정된 좌석입니다: " + 좌석 };
@@ -49,6 +49,6 @@ export function mockCheckin({ 회원ID, 이름, 좌석, 타임 }) {
   if (already) {
     return { success: false, error: "이미 체크인되었습니다 (좌석 " + already[0] + ")" };
   }
-  seatsForTime[좌석] = { 회원ID, 이름 };
+  seatsForTime[좌석] = { 회원ID, 이름, 학년반 };
   return { success: true };
 }

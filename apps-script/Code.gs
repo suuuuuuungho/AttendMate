@@ -3,6 +3,7 @@
  * 배포 방법은 apps-script/SETUP.md 참고.
  */
 
+var SPREADSHEET_ID = '1H_UIh7XQiPRnyAskPpMlu34OSRHTbjvifMgMqNrMcjo';
 var SHEET_MEMBERS = 'Sheet1';
 var SHEET_LOG = 'log';
 var MAX_SEARCH_RESULTS = 20;
@@ -45,11 +46,11 @@ function getColIndex(sheet, headerName) {
 }
 
 function getMembersSheet() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_MEMBERS);
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_MEMBERS);
 }
 
 function getLogSheet() {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_LOG);
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_LOG);
 }
 
 /** id(회원ID)로 학생 1명 조회. 전화번호는 절대 반환하지 않는다. */
@@ -98,7 +99,7 @@ function searchMembers(q) {
   return { results: results };
 }
 
-/** 특정 타임의 좌석 점유 현황을 { 좌석: {회원ID, 이름} } 형태로 반환. */
+/** 특정 타임의 좌석 점유 현황을 { 좌석: {회원ID, 이름, 학년반} } 형태로 반환. */
 function getSeats(time) {
   if (!time) return { seats: {} };
   var sheet = getLogSheet();
@@ -106,6 +107,7 @@ function getSeats(time) {
 
   var idCol = getColIndex(sheet, '회원ID');
   var nameCol = getColIndex(sheet, '이름');
+  var classCol = getColIndex(sheet, '학년반');
   var seatCol = getColIndex(sheet, '좌석');
   var timeCol = getColIndex(sheet, '타임');
   var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
@@ -113,7 +115,11 @@ function getSeats(time) {
   var seats = {};
   for (var i = 0; i < data.length; i++) {
     if (String(data[i][timeCol]) === String(time)) {
-      seats[data[i][seatCol]] = { 회원ID: data[i][idCol], 이름: data[i][nameCol] };
+      seats[data[i][seatCol]] = {
+        회원ID: data[i][idCol],
+        이름: data[i][nameCol],
+        학년반: data[i][classCol]
+      };
     }
   }
   return { seats: seats };
@@ -121,11 +127,12 @@ function getSeats(time) {
 
 /**
  * 체크인 처리: 좌석 중복 배정과 회원 중복 체크인을 막고 log 탭에 한 행 추가.
- * body: { 회원ID, 이름, 좌석, 타임 }
+ * body: { 회원ID, 이름, 학년반, 좌석, 타임 }
  */
 function checkin(body) {
   var memberId = body.회원ID;
   var name = body.이름;
+  var cls = body.학년반;
   var seat = body.좌석;
   var time = body.타임;
   if (!memberId || !seat || !time) {
@@ -155,10 +162,12 @@ function checkin(body) {
 
     var timestampCol = getColIndex(sheet, 'Timestamp');
     var nameCol = getColIndex(sheet, '이름');
+    var classCol = getColIndex(sheet, '학년반');
     var row = new Array(sheet.getLastColumn()).fill('');
     row[timestampCol] = new Date();
     row[idCol] = memberId;
     row[nameCol] = name;
+    row[classCol] = cls;
     row[seatCol] = seat;
     row[timeCol] = time;
     sheet.appendRow(row);

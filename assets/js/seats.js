@@ -88,6 +88,7 @@ async function assignMember(member) {
   const res = await apiPost("checkin", {
     회원ID: member.회원ID,
     이름: member.이름,
+    학년반: member.학년반,
     좌석: pendingSeatId,
     타임: currentTime,
   });

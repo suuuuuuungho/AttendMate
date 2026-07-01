@@ -55,6 +55,7 @@ async function handleSeatSelect(seatId) {
   const res = await apiPost("checkin", {
     회원ID: currentMember.회원ID,
     이름: currentMember.이름,
+    학년반: currentMember.학년반,
     좌석: seatId,
     타임: currentTime,
   });
