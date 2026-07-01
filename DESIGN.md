@@ -24,11 +24,17 @@ Apple 웹 디자인 분석(`Apple-design-analysis`)을 출석 관리 서비스 A
 | `--color-surface-black` | #000000 | 글로벌 상단 네비게이션 바 전용 |
 | `--color-ink` / `--color-body-on-dark` | #1d1d1f / #ffffff | 라이트/다크 표면 텍스트 |
 
-### 예외: 출석 상태 색상
-출석(정상)/지각/결석 같은 **상태 표시(status) 색상**은 Apple 원본에 없는 AttendMate 고유 요구사항이다. 이는 브랜드 액센트가 아니라 **데이터 시맨틱 컬러**로 별도 취급한다.
-- 상태 색은 배지·도트·표 셀 안에서만 쓰고, 버튼이나 링크에는 쓰지 않는다 (클릭 가능 신호는 여전히 `--color-primary`뿐).
-- 상태 색은 채도를 낮춰 Action Blue보다 시각적 우선순위가 낮게 만든다.
-- 신규 토큰 제안: `--color-status-present`(출석), `--color-status-late`(지각), `--color-status-absent`(결석) — 실제 값은 브랜드 컬러 확정 후 별도로 정의하고 이 문서에 추가한다.
+### 예외: 좌석 상태 색상
+좌석 배치 현황(영화관식 좌석 선택 화면)의 **점유 상태 표시**는 Apple 원본에 없는 AttendMate 고유 요구사항이다. 이는 브랜드 액센트가 아니라 **데이터 시맨틱 컬러**로 별도 취급하며, 좌석 버튼 안에서만 쓰고 링크·CTA에는 쓰지 않는다 (클릭 가능 신호는 여전히 `--color-primary`뿐).
+
+| 토큰 | 값 | 의미 |
+|---|---|---|
+| `--color-status-available` | #ffffff (테두리 `--color-hairline`) | 빈 좌석 — 클릭해서 배정 가능 |
+| `--color-status-selected` | `--color-primary` (#0066cc) | 지금 고르는 중인 좌석 |
+| `--color-status-taken` | #d2d2d7 | 이미 배정된 좌석 — 클릭 불가, 채도를 낮춰 Action Blue보다 우선순위 낮게 처리 |
+| `--color-status-taken-text` | `--color-ink-muted-48` (#7a7a7a) | 점유 좌석 위 좌석번호/이니셜 텍스트 |
+
+구현: [assets/css/seatmap.css](assets/css/seatmap.css), 구조는 [assets/js/seat-map.js](assets/js/seat-map.js).
 
 ## 타이포그래피 적용 규칙
 
@@ -54,6 +60,7 @@ Apple 웹 디자인 분석(`Apple-design-analysis`)을 출석 관리 서비스 A
 | `floating-sticky-bar` | 가입 유도 하단 고정 바 ("지금 무료로 시작하기") | `.floating-sticky-bar` |
 | `global-nav` + `sub-nav-frosted` | 상단 블랙 네비 + 페이지별 프로스티드 서브내비 | `.global-nav` / `.sub-nav-frosted` |
 | `footer` | 하단 링크/법적 고지 | `.footer` |
+| (신규, 원본에 없음) | 영화관식 좌석 배치 현황 — 8구역 640석 그리드 | `.seat-map`, `.seat` (+ 상태 클래스 `.seat--available/--selected/--taken`) |
 
 버튼 문법은 원본 그대로 두 가지만 쓴다:
 - **Pill (`--radius-pill`)**: 액션 CTA — `.btn-primary`, `.btn-secondary-pill`, `.btn-store-hero`
@@ -83,6 +90,5 @@ Apple 웹 디자인 분석(`Apple-design-analysis`)을 출석 관리 서비스 A
 
 ## 미해결 / 추가 정의 필요
 
-- 출석 상태 시맨틱 컬러(`--color-status-present/late/absent`)의 실제 hex 값 — 브랜드 회의 후 확정.
 - 다크모드 대응 (원본 Apple 분석에도 다크모드 카드 스펙은 없음 — AttendMate에서 필요 시 별도 설계).
 - 폼 검증/에러 상태 스타일 (원본에 미문서화) — 출석 정정 요청 폼 등에 필요 시 추가 정의.

@@ -1,0 +1,139 @@
+/* AttendMate — 좌석 배치 현황 / QR 체크인 전용 컴포넌트 (Apple 원본에 없는 신규 컴포넌트) */
+
+.seat-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-lg);
+}
+.seat-map__floor {
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.seat-map__section {
+  background: var(--color-canvas-parchment);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm);
+}
+.seat-map__section-label {
+  text-align: center;
+  margin-bottom: var(--space-xs);
+  color: var(--color-ink);
+}
+.seat-map__grid {
+  display: grid;
+  gap: 4px;
+}
+
+.seat {
+  width: 22px;
+  height: 22px;
+  font-family: var(--font-text);
+  font-size: 9px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+.seat--available {
+  background: var(--color-status-available);
+  border-color: var(--color-status-available-border);
+  color: var(--color-ink-muted-80);
+  cursor: pointer;
+}
+.seat--available:hover { border-color: var(--color-primary); }
+.seat--selected {
+  background: var(--color-status-selected);
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+.seat--taken {
+  background: var(--color-status-taken);
+  color: var(--color-status-taken-text);
+  cursor: pointer;
+}
+.seat:active { transform: var(--press-scale); }
+
+/* 타임 탭 — option-chip 문법 재사용 */
+.time-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: var(--space-lg) var(--space-lg) 0;
+}
+.time-tab {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  padding: 8px 18px;
+}
+.time-tab--selected {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+}
+
+/* 모달 (좌석 배정용 학생 검색 / 점유 좌석 정보) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-lg);
+}
+.modal-panel {
+  background: var(--color-canvas);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.modal-panel__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.modal-panel__result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.modal-panel__result:hover { background: var(--color-canvas-parchment); }
+
+/* 토스트 (scan.html 체크인 결과) */
+.toast {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-text);
+  font-size: var(--type-body-size);
+  color: var(--color-on-primary);
+  z-index: 300;
+}
+.toast--success { background: var(--color-primary); }
+.toast--error { background: var(--color-ink); }

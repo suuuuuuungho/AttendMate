@@ -156,4 +156,12 @@
   /* ===== Layout ===== */
   --container-max: 1440px;
   --container-copy-max: 980px;
+
+  /* ===== Status (seat map data-semantic colors — NOT brand accents) =====
+     클릭 가능 신호는 여전히 --color-primary 하나뿐. 이 색들은 좌석 점유 상태 표시 전용. */
+  --color-status-available: #ffffff;
+  --color-status-available-border: var(--color-hairline);
+  --color-status-selected: var(--color-primary);
+  --color-status-taken: #d2d2d7;
+  --color-status-taken-text: var(--color-ink-muted-48);
 }
