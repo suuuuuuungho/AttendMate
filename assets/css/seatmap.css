@@ -15,27 +15,36 @@
 }
 
 .seat-map {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xl);
   max-width: var(--container-max);
   margin: 0 auto;
   padding: var(--space-lg) 0;
 }
-/* 좌석 형태는 화면 크기와 무관하게 고정 — 줄바꿈(wrap) 대신 가로 스와이프/스크롤로 넘친 구역을 본다. */
-.seat-map__floor {
-  display: flex;
-  gap: var(--space-lg);
-  flex-wrap: nowrap;
+/*
+ * 좌석 형태는 화면 크기와 무관하게 고정된다 — 8구역은 모두 같은 층이고 위/아래 두 줄로
+ * 배치될 뿐이므로, 가로 스크롤은 두 줄이 함께 움직여야 한다 (줄마다 따로 스크롤되면
+ * A구역과 E구역처럼 같은 열의 구역이 서로 어긋나 보인다). 그래서 스크롤은 바깥
+ * .seat-map__scroll 하나에만 있고, 안쪽 두 줄(.seat-map__row)은 그 안에서 함께 밀린다.
+ */
+.seat-map__scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
-  padding: 0 var(--space-lg) var(--space-xs);
 }
-.seat-map__floor::-webkit-scrollbar { height: 6px; }
-.seat-map__floor::-webkit-scrollbar-thumb {
+.seat-map__scroll::-webkit-scrollbar { height: 6px; }
+.seat-map__scroll::-webkit-scrollbar-thumb {
   background: var(--color-hairline);
   border-radius: var(--radius-pill);
+}
+.seat-map__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  width: max-content;
+  padding: 0 var(--space-lg) var(--space-xs);
+}
+.seat-map__row {
+  display: flex;
+  gap: var(--space-lg);
 }
 .seat-map__section {
   flex: 0 0 auto;

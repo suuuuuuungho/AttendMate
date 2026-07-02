@@ -1,4 +1,5 @@
-// 640석 극장식 좌석 배치 — 8구역(A~H), 위/아래 두 층에 4구역씩.
+// 640석 극장식 좌석 배치 — 8구역(A~H), 전부 같은 층. 위/아래 두 줄로 배치될 뿐이라
+// 가로 스크롤은 두 줄이 같은 위치로 함께 움직여야 한다 (줄마다 따로 스크롤되면 안 됨).
 export const SEAT_SECTIONS = [
   { id: "A", cols: 7, rows: 10 },
   { id: "B", cols: 9, rows: 10 },
@@ -10,7 +11,7 @@ export const SEAT_SECTIONS = [
   { id: "H", cols: 7, rows: 10 },
 ];
 
-export const SEAT_FLOORS = [
+export const SEAT_ROWS = [
   ["A", "B", "C", "D"],
   ["E", "F", "G", "H"],
 ];
@@ -52,11 +53,17 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
   container.innerHTML = "";
   container.classList.add("seat-map");
 
-  for (const floorIds of SEAT_FLOORS) {
-    const floorEl = document.createElement("div");
-    floorEl.className = "seat-map__floor";
+  const scrollEl = document.createElement("div");
+  scrollEl.className = "seat-map__scroll";
 
-    for (const sectionId of floorIds) {
+  const rowsEl = document.createElement("div");
+  rowsEl.className = "seat-map__rows";
+
+  for (const rowIds of SEAT_ROWS) {
+    const rowEl = document.createElement("div");
+    rowEl.className = "seat-map__row";
+
+    for (const sectionId of rowIds) {
       const section = SEAT_SECTIONS.find((s) => s.id === sectionId);
       const sectionEl = document.createElement("div");
       sectionEl.className = "seat-map__section";
@@ -104,9 +111,12 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
       }
 
       sectionEl.appendChild(grid);
-      floorEl.appendChild(sectionEl);
+      rowEl.appendChild(sectionEl);
     }
 
-    container.appendChild(floorEl);
+    rowsEl.appendChild(rowEl);
   }
+
+  scrollEl.appendChild(rowsEl);
+  container.appendChild(scrollEl);
 }
