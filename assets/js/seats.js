@@ -70,7 +70,9 @@ async function loadSeats() {
   const res = await apiGet("getSeats", { time: currentTime });
   currentSeats = res.seats || {};
   renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
-  lastUpdatedEl.textContent = "마지막 갱신 " + new Date().toLocaleTimeString("ko-KR");
+  lastUpdatedEl.textContent =
+    new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }) +
+    " Updated";
 }
 
 function handleSeatClick(seatId, occupant) {
