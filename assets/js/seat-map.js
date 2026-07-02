@@ -52,6 +52,12 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
     container._seatMapBound = true;
   }
 
+  // 15초 폴링/좌석 배정마다 DOM을 통째로 다시 그리는데, 그때마다 스크롤 위치가
+  // 0(A구역)으로 초기화되면 사용자가 보고 있던 구역이 갑자기 바뀌어 버린다.
+  // 기존 스크롤 위치를 기억해뒀다가 새로 그린 뒤 그대로 복원한다.
+  const prevScrollEl = container.querySelector(".seat-map__scroll");
+  const prevScrollLeft = prevScrollEl ? prevScrollEl.scrollLeft : 0;
+
   container.innerHTML = "";
   container.classList.add("seat-map");
 
@@ -131,6 +137,10 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
 
   lastFit = { scrollEl, rowsEl };
   fitToWidth();
+  // scrollLeft는 transform(scale)이 적용된 뒤에 복원해야 한다 — transform을 나중에
+  // 적용하면 스크롤 가능 범위가 줄어들면서 먼저 넣어둔 scrollLeft가 브라우저에 의해
+  // 다시 잘려나간다.
+  scrollEl.scrollLeft = prevScrollLeft;
 }
 
 // 전체 좌석판(강단 포함)이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석
