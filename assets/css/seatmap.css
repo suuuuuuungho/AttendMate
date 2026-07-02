@@ -1,5 +1,15 @@
 /* AttendMate — 좌석 배치 현황 / QR 체크인 전용 컴포넌트 (Apple 원본에 없는 신규 컴포넌트) */
 
+/* 범례 + 좌석 찾기 검색을 글로벌 네비(44px) + 서브내비(52px) 바로 아래에 고정한다 —
+   페이지를 스크롤해도 항상 보이도록. */
+.sticky-toolbar {
+  position: sticky;
+  top: 96px;
+  z-index: 80;
+  background: var(--color-canvas);
+  padding-bottom: var(--space-sm);
+}
+
 /* 학년/부서 색상 범례 — 좌석 배경색만으로는 어떤 색이 어떤 학년인지 알 수 없어서 필요하다. */
 .grade-legend {
   display: flex;
