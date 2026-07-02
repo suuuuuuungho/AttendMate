@@ -66,13 +66,20 @@ function renderSeatMapSkeleton() {
   renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
 }
 
+/** "PM 6:26" 형식 (AM/PM이 시각 앞에 옴) — Intl 로케일 포맷으로는 못 만들어서 직접 조립한다. */
+function formatUpdatedTime(date) {
+  const hours24 = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours24 >= 12 ? "PM" : "AM";
+  const hours12 = hours24 % 12 || 12;
+  return `${ampm} ${hours12}:${minutes}`;
+}
+
 async function loadSeats() {
   const res = await apiGet("getSeats", { time: currentTime });
   currentSeats = res.seats || {};
   renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
-  lastUpdatedEl.textContent =
-    new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }) +
-    " Updated";
+  lastUpdatedEl.textContent = formatUpdatedTime(new Date()) + " Updated";
 }
 
 function handleSeatClick(seatId, occupant) {
