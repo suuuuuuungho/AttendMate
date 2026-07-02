@@ -26,6 +26,23 @@ export function abbreviateClass(cls) {
 }
 
 /**
+ * 학년반 원문에서 학년 그룹을 뽑아낸다. 좌석 배경색을 학년별로 다르게 칠하는 데 쓴다.
+ * 순서가 중요하다 — "신입"/"장기섬김"이 "학년" 숫자보다 먼저 매칭되어야 한다.
+ */
+export const GRADE_GROUPS = [
+  { key: "grade1", label: "1학년", match: /1학년/, cssVar: "--color-grade-1" },
+  { key: "grade2", label: "2학년", match: /2학년/, cssVar: "--color-grade-2" },
+  { key: "grade3", label: "3학년", match: /3학년/, cssVar: "--color-grade-3" },
+  { key: "new", label: "신입반", match: /신입/, cssVar: "--color-grade-new" },
+  { key: "longterm", label: "장기섬김", match: /장기섬김/, cssVar: "--color-grade-longterm" },
+];
+
+export function getGradeGroup(cls) {
+  if (!cls) return null;
+  return GRADE_GROUPS.find((g) => g.match.test(cls)) || null;
+}
+
+/**
  * @param {HTMLElement} container
  * @param {Record<string, {회원ID: string, 이름: string, 학년반: string}>} seatStatus - 점유된 좌석만 담긴 맵
  * @param {{selectable?: boolean, selectedSeat?: string|null, onSeatClick?: (seatId:string, occupant:object|null)=>void}} opts
@@ -63,6 +80,12 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
 
   const scrollEl = document.createElement("div");
   scrollEl.className = "seat-map__scroll";
+
+  // rowsEl에 transform: scale()을 걸면 scrollEl의 scrollWidth가 축소된 시각적
+  // 크기를 안정적으로 반영하지 않는 경우가 있어서(끝까지 스크롤해도 빈 공간이 남음),
+  // 실제 스케일된 크기로 명시적 width/height를 잡아주는 래퍼를 하나 둔다.
+  const scaleWrapEl = document.createElement("div");
+  scaleWrapEl.className = "seat-map__scale-wrap";
 
   const rowsEl = document.createElement("div");
   rowsEl.className = "seat-map__rows";
@@ -104,6 +127,8 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
 
         if (occupant) {
           btn.classList.add("seat--taken");
+          const grade = getGradeGroup(occupant.학년반);
+          btn.classList.add(grade ? `seat--${grade.key}` : "seat--grade-other");
           const cls = abbreviateClass(occupant.학년반);
           const nameEl = document.createElement("span");
           nameEl.className = "seat__name";
@@ -132,15 +157,21 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
     rowsEl.appendChild(rowEl);
   }
 
-  scrollEl.appendChild(rowsEl);
+  scaleWrapEl.appendChild(rowsEl);
+  scrollEl.appendChild(scaleWrapEl);
   container.appendChild(scrollEl);
+  // fitToWidth()가 이 값을 자기 transform 변경 전후로 캡처/복원하므로, 미리 넣어둔다
+  // (DOM을 통째로 새로 만들었으니 새 scrollEl은 항상 0에서 시작하기 때문). .seat-map__scroll에
+  // scroll-behavior:smooth가 걸려있어서 scrollLeft를 그냥 대입하면 애니메이션으로 처리되어
+  // 버려서(읽으면 아직 0), instant로 강제한다.
+  setScrollLeftInstant(scrollEl, prevScrollLeft);
 
-  lastFit = { scrollEl, rowsEl };
+  lastFit = { scrollEl, scaleWrapEl, rowsEl };
   fitToWidth();
-  // scrollLeft는 transform(scale)이 적용된 뒤에 복원해야 한다 — transform을 나중에
-  // 적용하면 스크롤 가능 범위가 줄어들면서 먼저 넣어둔 scrollLeft가 브라우저에 의해
-  // 다시 잘려나간다.
-  scrollEl.scrollLeft = prevScrollLeft;
+}
+
+function setScrollLeftInstant(scrollEl, left) {
+  scrollEl.scrollTo({ left, behavior: "instant" });
 }
 
 // 전체 좌석판(강단 포함)이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석
@@ -152,8 +183,15 @@ let lastFit = null;
 
 function fitToWidth() {
   if (!lastFit) return;
-  const { scrollEl, rowsEl } = lastFit;
+  const { scrollEl, scaleWrapEl, rowsEl } = lastFit;
+  // 리사이즈(예: 모바일 브라우저 주소창이 스크롤 중 접히면서 뷰포트 높이/폭이 바뀌는
+  // 경우)로도 이 함수가 호출된다. transform을 다시 계산하는 동안 스크롤 가능 범위가
+  // 잠깐 바뀌면서 scrollLeft가 브라우저에 의해 잘려나갈 수 있어서, 항상 이 함수
+  // 안에서 자기 자신의 scrollLeft를 캡처했다가 그대로 복원한다.
+  const prevScrollLeft = scrollEl.scrollLeft;
   rowsEl.style.transform = "none";
+  scaleWrapEl.style.width = "";
+  scaleWrapEl.style.height = "";
   const contentWidth = rowsEl.scrollWidth;
   const contentHeight = rowsEl.scrollHeight;
   const availableWidth = scrollEl.clientWidth;
@@ -161,7 +199,12 @@ function fitToWidth() {
   const scale = Math.max(MIN_SCALE, Math.min(1, availableWidth / contentWidth));
   rowsEl.style.transformOrigin = "top left";
   rowsEl.style.transform = `scale(${scale})`;
-  scrollEl.style.height = contentHeight * scale + "px";
+  // scaleWrapEl에 스케일된 실제 크기를 명시적으로 지정해야, scrollEl의 스크롤 가능
+  // 범위가 (transform으로는 신뢰할 수 없는) 시각적 크기와 정확히 일치한다 — 안 그러면
+  // 끝까지 스크롤했을 때 빈 여백만 남는 경우가 있었다.
+  scaleWrapEl.style.width = contentWidth * scale + "px";
+  scaleWrapEl.style.height = contentHeight * scale + "px";
+  setScrollLeftInstant(scrollEl, prevScrollLeft);
 }
 
 if (typeof window !== "undefined" && !window._seatMapResizeBound) {

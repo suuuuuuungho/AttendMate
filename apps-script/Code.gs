@@ -67,9 +67,9 @@ function getMember(id) {
     if (String(data[i][idCol]) === String(id)) {
       return {
         found: true,
-        회원ID: data[i][idCol],
-        이름: data[i][nameCol],
-        학년반: data[i][classCol]
+        회원ID: String(data[i][idCol]),
+        이름: String(data[i][nameCol]),
+        학년반: String(data[i][classCol])
       };
     }
   }
@@ -141,9 +141,9 @@ function getSeats(time) {
   for (var i = 0; i < data.length; i++) {
     if (String(data[i][timeCol]) === String(time)) {
       seats[data[i][seatCol]] = {
-        회원ID: data[i][idCol],
-        이름: data[i][nameCol],
-        학년반: data[i][classCol]
+        회원ID: String(data[i][idCol]),
+        이름: String(data[i][nameCol]),
+        학년반: String(data[i][classCol])
       };
     }
   }

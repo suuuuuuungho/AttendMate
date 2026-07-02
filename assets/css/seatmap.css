@@ -1,5 +1,56 @@
 /* AttendMate — 좌석 배치 현황 / QR 체크인 전용 컴포넌트 (Apple 원본에 없는 신규 컴포넌트) */
 
+/* 학년/부서 색상 범례 — 좌석 배경색만으로는 어떤 색이 어떤 학년인지 알 수 없어서 필요하다. */
+.grade-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg) 0;
+}
+.grade-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.grade-legend__swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.grade-legend__label {
+  color: var(--color-ink-muted-80);
+}
+
+/* 좌석 찾기 검색 — "강단" 위, 좌석판 스케일 그룹 밖(항상 읽기 좋은 실제 크기로 유지). */
+.locate-search {
+  position: relative;
+  max-width: 420px;
+  margin: var(--space-sm) auto 0;
+  padding: 0 var(--space-lg);
+}
+.locate-search__results {
+  position: absolute;
+  left: var(--space-lg);
+  right: var(--space-lg);
+  top: calc(100% + 4px);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  z-index: 150;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-xxs);
+}
+.locate-search__empty {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-ink-muted-48);
+}
+
 .seat-map {
   max-width: var(--container-max);
   margin: 0 auto;
@@ -14,19 +65,26 @@
 .seat-map__scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
 }
 .seat-map__scroll::-webkit-scrollbar { height: 6px; }
 .seat-map__scroll::-webkit-scrollbar-thumb {
   background: var(--color-hairline);
   border-radius: var(--radius-pill);
 }
+/* fitToWidth()가 스케일된 실제 크기로 width/height를 명시적으로 지정하는 대상.
+   이 크기가 곧 .seat-map__scroll의 스크롤 가능 범위가 된다. */
+.seat-map__scale-wrap {
+  overflow: hidden;
+}
 .seat-map__rows {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
   width: max-content;
-  padding: var(--space-sm) var(--space-lg) var(--space-xs);
+  /* 왼쪽(A/E 앞) · 오른쪽(D/H 뒤) · 아래(E~H 밑) 여백을 전부 같은 값으로 맞춰 균형을 맞춘다. */
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+  will-change: transform;
 }
 /* 강단은 좌석 줄과 같은 .seat-map__rows 안에 있어서, 좌석판이 확대/축소될 때 같은
    비율로 함께 커지고 작아진다 (밖에 따로 있으면 강단만 따로 놀게 된다). */
@@ -46,7 +104,6 @@
 }
 .seat-map__section {
   flex: 0 0 auto;
-  scroll-snap-align: start;
   background: var(--color-canvas-parchment);
   border-radius: var(--radius-lg);
   padding: var(--space-sm);
@@ -109,7 +166,25 @@
   color: var(--color-status-taken-text);
   cursor: pointer;
 }
+/* 학년/부서별 좌석 색상 — 브랜드 액센트가 아니라 데이터 구분용 색이라 좌석 배경에만 쓴다. */
+.seat--grade1 { background: var(--color-grade-1); color: var(--color-grade-text); }
+.seat--grade2 { background: var(--color-grade-2); color: var(--color-grade-text); }
+.seat--grade3 { background: var(--color-grade-3); color: var(--color-grade-text); }
+.seat--new { background: var(--color-grade-new); color: var(--color-grade-text); }
+.seat--longterm { background: var(--color-grade-longterm); color: var(--color-grade-text); }
+.seat--grade-other { background: var(--color-status-taken); color: var(--color-status-taken-text); }
+
 .seat:active { transform: var(--press-scale); }
+
+/* 좌석 찾기 결과 하이라이트 — 시스템에서 유이하게 허용된 그림자 예외(글로우), 몇 초만 유지된다. */
+.seat--glow {
+  animation: seat-glow-pulse 1s ease-in-out infinite;
+  z-index: 5;
+}
+@keyframes seat-glow-pulse {
+  0%, 100% { box-shadow: var(--shadow-glow); }
+  50% { box-shadow: 0 0 18px 6px rgba(0, 102, 204, 0.9); }
+}
 
 /*
  * 타임 선택 — 서브내비 우측(예전 "n타임" 표시 자리)에 들어가는 컴팩트 드롭다운.
