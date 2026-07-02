@@ -42,13 +42,52 @@ export function getGradeGroup(cls) {
   return GRADE_GROUPS.find((g) => g.match.test(cls)) || null;
 }
 
+/** 좌석 버튼 하나의 상태(클래스/내용물)를 원하는 상태로 맞춘다. 최초 생성과 갱신이 공유. */
+function applySeatState(btn, seatId, occupant, selectedSeat, selectable) {
+  const n = seatId.slice(1);
+  // 좌석 찾기 글로우가 폴링 갱신에 지워지지 않도록 보존한다.
+  const hasGlow = btn.classList.contains("seat--glow");
+  btn.className = "seat";
+  if (hasGlow) btn.classList.add("seat--glow");
+  btn.disabled = false;
+  btn.textContent = "";
+  btn.removeAttribute("title");
+
+  if (occupant) {
+    btn.classList.add("seat--taken");
+    const grade = getGradeGroup(occupant.학년반);
+    btn.classList.add(grade ? `seat--${grade.key}` : "seat--grade-other");
+    const cls = abbreviateClass(occupant.학년반);
+    const nameEl = document.createElement("span");
+    nameEl.className = "seat__name";
+    nameEl.textContent = occupant.이름 || "";
+    const classEl = document.createElement("span");
+    classEl.className = "seat__class";
+    classEl.textContent = cls;
+    btn.append(nameEl, classEl);
+    btn.title = `${seatId} — ${occupant.이름 || ""} · ${cls}`;
+  } else if (seatId === selectedSeat) {
+    btn.textContent = n;
+    btn.classList.add("seat--selected");
+  } else {
+    btn.textContent = n;
+    btn.classList.add("seat--available");
+    if (!selectable) btn.disabled = true;
+  }
+}
+
 /**
  * @param {HTMLElement} container
  * @param {Record<string, {회원ID: string, 이름: string, 학년반: string}>} seatStatus - 점유된 좌석만 담긴 맵
  * @param {{selectable?: boolean, selectedSeat?: string|null, onSeatClick?: (seatId:string, occupant:object|null)=>void}} opts
  *
- * 640개 좌석 버튼마다 클릭 리스너를 새로 붙이는 대신, container에 리스너 하나만 붙이고
- * 이벤트 위임으로 처리한다 — 재렌더링(폴링/배정)마다 640개 리스너를 만들고 버리는 비용을 없앤다.
+ * DOM은 최초 호출에서 한 번만 만들고, 이후 호출(15초 폴링/좌석 배정)에서는 좌석 버튼의
+ * 상태만 제자리에서 갱신한다. 스크롤 컨테이너를 부수고 다시 만들지 않으므로 스크롤
+ * 위치가 리셋될 여지가 아예 없다 — 이전에는 재렌더링 후 scrollLeft를 "복원"하는
+ * 방식이었는데, smooth 스크롤 애니메이션 도중이거나 브라우저별 타이밍에 따라
+ * 복원값이 씹히면서 A구역으로 튕기는 문제가 재발했다.
+ *
+ * 클릭은 640개 버튼 각각이 아니라 container에 리스너 하나만 붙여 이벤트 위임으로 처리.
  */
 export function renderSeatMap(container, seatStatus, opts = {}) {
   const { selectable = true, selectedSeat = null, onSeatClick = () => {} } = opts;
@@ -69,11 +108,13 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
     container._seatMapBound = true;
   }
 
-  // 15초 폴링/좌석 배정마다 DOM을 통째로 다시 그리는데, 그때마다 스크롤 위치가
-  // 0(A구역)으로 초기화되면 사용자가 보고 있던 구역이 갑자기 바뀌어 버린다.
-  // 기존 스크롤 위치를 기억해뒀다가 새로 그린 뒤 그대로 복원한다.
-  const prevScrollEl = container.querySelector(".seat-map__scroll");
-  const prevScrollLeft = prevScrollEl ? prevScrollEl.scrollLeft : 0;
+  // 이미 만들어져 있으면 좌석 상태만 갱신하고 끝 — 스크롤은 손대지 않는다.
+  if (container._seatMapBuilt) {
+    for (const btn of container.querySelectorAll(".seat")) {
+      applySeatState(btn, btn.dataset.seat, seatStatus[btn.dataset.seat] || null, selectedSeat, selectable);
+    }
+    return;
+  }
 
   container.innerHTML = "";
   container.classList.add("seat-map");
@@ -118,35 +159,11 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
       const total = section.cols * section.rows;
       for (let n = 1; n <= total; n++) {
         const seatId = sectionId + n;
-        const occupant = seatStatus[seatId] || null;
-
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "seat";
         btn.dataset.seat = seatId;
-
-        if (occupant) {
-          btn.classList.add("seat--taken");
-          const grade = getGradeGroup(occupant.학년반);
-          btn.classList.add(grade ? `seat--${grade.key}` : "seat--grade-other");
-          const cls = abbreviateClass(occupant.학년반);
-          const nameEl = document.createElement("span");
-          nameEl.className = "seat__name";
-          nameEl.textContent = occupant.이름 || "";
-          const classEl = document.createElement("span");
-          classEl.className = "seat__class";
-          classEl.textContent = cls;
-          btn.append(nameEl, classEl);
-          btn.title = `${seatId} — ${occupant.이름 || ""} · ${cls}`;
-        } else if (seatId === selectedSeat) {
-          btn.textContent = n;
-          btn.classList.add("seat--selected");
-        } else {
-          btn.textContent = n;
-          btn.classList.add("seat--available");
-          if (!selectable) btn.disabled = true;
-        }
-
+        applySeatState(btn, seatId, seatStatus[seatId] || null, selectedSeat, selectable);
         grid.appendChild(btn);
       }
 
@@ -160,18 +177,23 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
   scaleWrapEl.appendChild(rowsEl);
   scrollEl.appendChild(scaleWrapEl);
   container.appendChild(scrollEl);
-  // fitToWidth()가 이 값을 자기 transform 변경 전후로 캡처/복원하므로, 미리 넣어둔다
-  // (DOM을 통째로 새로 만들었으니 새 scrollEl은 항상 0에서 시작하기 때문). .seat-map__scroll에
-  // scroll-behavior:smooth가 걸려있어서 scrollLeft를 그냥 대입하면 애니메이션으로 처리되어
-  // 버려서(읽으면 아직 0), instant로 강제한다.
-  setScrollLeftInstant(scrollEl, prevScrollLeft);
+  container._seatMapBuilt = true;
 
   lastFit = { scrollEl, scaleWrapEl, rowsEl };
   fitToWidth();
 }
 
+/**
+ * scrollLeft를 애니메이션 없이 즉시 적용한다. `scrollTo({behavior:"instant"})`는
+ * 표준 값이 아니라서(공식 스펙엔 "auto"/"smooth"뿐) 사파리 등 일부 브라우저에서
+ * 무시되거나 다르게 동작할 수 있다 — 그래서 CSS의 scroll-behavior:smooth를
+ * 인라인 스타일로 잠깐 "auto"로 덮어써서 확실하게 즉시 이동시킨다.
+ */
 function setScrollLeftInstant(scrollEl, left) {
-  scrollEl.scrollTo({ left, behavior: "instant" });
+  const prevBehavior = scrollEl.style.scrollBehavior;
+  scrollEl.style.scrollBehavior = "auto";
+  scrollEl.scrollLeft = left;
+  scrollEl.style.scrollBehavior = prevBehavior;
 }
 
 // 전체 좌석판(강단 포함)이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석
