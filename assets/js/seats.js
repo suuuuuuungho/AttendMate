@@ -5,7 +5,6 @@ import { renderTimeTabs } from "./time-tabs.js";
 
 const timeTabsEl = document.getElementById("timeTabs");
 const seatMapEl = document.getElementById("seatMap");
-const currentTimeLabelEl = document.getElementById("currentTimeLabel");
 const lastUpdatedEl = document.getElementById("lastUpdated");
 const refreshBtn = document.getElementById("refreshBtn");
 
@@ -39,7 +38,6 @@ function refreshTabs() {
     refreshTabs();
     loadSeats();
   });
-  currentTimeLabelEl.textContent = currentTime;
 }
 
 /** 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다. */

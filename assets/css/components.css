@@ -82,11 +82,11 @@
 }
 .sub-nav-frosted__title {
   font-family: var(--font-display);
-  font-size: var(--type-tagline-size);
+  font-size: 15px;
   font-weight: var(--type-tagline-weight);
   letter-spacing: var(--type-tagline-ls);
 }
-.sub-nav-frosted__links { display: flex; gap: var(--space-lg); align-items: center; }
+.sub-nav-frosted__links { display: flex; gap: var(--space-sm); align-items: center; }
 
 /* ===================== Inputs ===================== */
 

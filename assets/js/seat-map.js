@@ -16,6 +16,8 @@ export const SEAT_ROWS = [
   ["E", "F", "G", "H"],
 ];
 
+export const STAGE_LABEL = "강단";
+
 /** "중등부 1학년 1-1반" 같은 학년반 표기를 좌석 위에 표시할 "1-1반"로 축약. */
 export function abbreviateClass(cls) {
   if (!cls) return "";
@@ -58,6 +60,13 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
 
   const rowsEl = document.createElement("div");
   rowsEl.className = "seat-map__rows";
+
+  // "강단" 표시 바를 좌석 줄과 같은 스케일/스크롤 그룹(.seat-map__rows) 안에 넣는다 —
+  // 밖에 따로 있으면 좌석판이 확대/축소될 때 강단만 따로 놀게 된다.
+  const stageEl = document.createElement("div");
+  stageEl.className = "seat-map__stage text-tagline";
+  stageEl.textContent = STAGE_LABEL;
+  rowsEl.appendChild(stageEl);
 
   for (const rowIds of SEAT_ROWS) {
     const rowEl = document.createElement("div");
@@ -124,9 +133,11 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
   fitToWidth();
 }
 
-// 전체 좌석판이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석 예매 화면처럼
-// 전체가 한눈에 보이고 두 줄이 항상 같은 비율로 함께 움직인다). 넘치면 스크롤하는 대신
-// transform: scale로 줄인다 — 화면보다 작을 때는 확대하지 않는다(scale 상한 1).
+// 전체 좌석판(강단 포함)이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석
+// 예매 화면처럼 전체가 한눈에 보이고 두 줄+강단이 항상 같은 비율로 함께 움직인다).
+// 좌석이 안 보일 정도로 작아지지 않도록 MIN_SCALE 밑으로는 축소하지 않고, 그보다
+// 더 넘치는 부분은 .seat-map__scroll의 가로 스크롤로 본다 (여전히 강단+두 줄이 함께 움직임).
+const MIN_SCALE = 0.6;
 let lastFit = null;
 
 function fitToWidth() {
@@ -137,7 +148,7 @@ function fitToWidth() {
   const contentHeight = rowsEl.scrollHeight;
   const availableWidth = scrollEl.clientWidth;
   if (!contentWidth || !availableWidth) return;
-  const scale = Math.min(1, availableWidth / contentWidth);
+  const scale = Math.max(MIN_SCALE, Math.min(1, availableWidth / contentWidth));
   rowsEl.style.transformOrigin = "top left";
   rowsEl.style.transform = `scale(${scale})`;
   scrollEl.style.height = contentHeight * scale + "px";
