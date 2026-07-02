@@ -1,20 +1,45 @@
 /* AttendMate — 좌석 배치 현황 / QR 체크인 전용 컴포넌트 (Apple 원본에 없는 신규 컴포넌트) */
 
+.stage-bar {
+  max-width: var(--container-max);
+  margin: var(--space-lg) auto 0;
+  padding: 0 var(--space-lg);
+}
+.stage-bar__box {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  text-align: center;
+  color: var(--color-ink);
+}
+
 .seat-map {
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: var(--space-lg);
+  padding: var(--space-lg) 0;
 }
+/* 좌석 형태는 화면 크기와 무관하게 고정 — 줄바꿈(wrap) 대신 가로 스와이프/스크롤로 넘친 구역을 본다. */
 .seat-map__floor {
   display: flex;
   gap: var(--space-lg);
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding: 0 var(--space-lg) var(--space-xs);
+}
+.seat-map__floor::-webkit-scrollbar { height: 6px; }
+.seat-map__floor::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+  border-radius: var(--radius-pill);
 }
 .seat-map__section {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
   background: var(--color-canvas-parchment);
   border-radius: var(--radius-lg);
   padding: var(--space-sm);
