@@ -24,11 +24,30 @@ export function abbreviateClass(cls) {
 
 /**
  * @param {HTMLElement} container
- * @param {Record<string, {회원ID: string, 이름: string}>} seatStatus - 점유된 좌석만 담긴 맵
+ * @param {Record<string, {회원ID: string, 이름: string, 학년반: string}>} seatStatus - 점유된 좌석만 담긴 맵
  * @param {{selectable?: boolean, selectedSeat?: string|null, onSeatClick?: (seatId:string, occupant:object|null)=>void}} opts
+ *
+ * 640개 좌석 버튼마다 클릭 리스너를 새로 붙이는 대신, container에 리스너 하나만 붙이고
+ * 이벤트 위임으로 처리한다 — 재렌더링(폴링/배정)마다 640개 리스너를 만들고 버리는 비용을 없앤다.
  */
 export function renderSeatMap(container, seatStatus, opts = {}) {
   const { selectable = true, selectedSeat = null, onSeatClick = () => {} } = opts;
+
+  container._seatStatus = seatStatus;
+  container._onSeatClick = onSeatClick;
+  container._selectable = selectable;
+
+  if (!container._seatMapBound) {
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".seat");
+      if (!btn || btn.disabled) return;
+      const seatId = btn.dataset.seat;
+      const occupant = container._seatStatus[seatId] || null;
+      if (!occupant && !container._selectable) return;
+      container._onSeatClick(seatId, occupant);
+    });
+    container._seatMapBound = true;
+  }
 
   container.innerHTML = "";
   container.classList.add("seat-map");
@@ -72,16 +91,13 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
           classEl.textContent = cls;
           btn.append(nameEl, classEl);
           btn.title = `${seatId} — ${occupant.이름 || ""} · ${cls}`;
-          btn.addEventListener("click", () => onSeatClick(seatId, occupant));
         } else if (seatId === selectedSeat) {
           btn.textContent = n;
           btn.classList.add("seat--selected");
-          btn.addEventListener("click", () => onSeatClick(seatId, null));
         } else {
           btn.textContent = n;
           btn.classList.add("seat--available");
           if (!selectable) btn.disabled = true;
-          else btn.addEventListener("click", () => onSeatClick(seatId, null));
         }
 
         grid.appendChild(btn);

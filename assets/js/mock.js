@@ -36,6 +36,10 @@ export function mockSearchMembers(q) {
   return { results };
 }
 
+export function mockGetAllMembers() {
+  return { members: MOCK_MEMBERS };
+}
+
 export function mockGetSeats(time) {
   return { seats: mockSeatLog[time] || {} };
 }

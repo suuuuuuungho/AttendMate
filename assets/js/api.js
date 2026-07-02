@@ -1,5 +1,5 @@
 import { APPS_SCRIPT_URL } from "./config.js";
-import { mockGetMember, mockSearchMembers, mockGetSeats, mockCheckin } from "./mock.js";
+import { mockGetMember, mockSearchMembers, mockGetAllMembers, mockGetSeats, mockCheckin } from "./mock.js";
 
 const USE_MOCK = !APPS_SCRIPT_URL;
 
@@ -31,6 +31,7 @@ export async function apiPost(action, body) {
 function mockGet(action, params) {
   if (action === "getMember") return mockGetMember(params.id);
   if (action === "searchMembers") return mockSearchMembers(params.q);
+  if (action === "getAllMembers") return mockGetAllMembers();
   if (action === "getSeats") return mockGetSeats(params.time);
   return { error: "알 수 없는 action: " + action };
 }

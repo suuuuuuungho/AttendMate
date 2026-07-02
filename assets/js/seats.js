@@ -19,9 +19,19 @@ const occupantModal = document.getElementById("occupantModal");
 const occupantModalText = document.getElementById("occupantModalText");
 const occupantCloseBtn = document.getElementById("occupantCloseBtn");
 
+const MAX_SEARCH_RESULTS = 20;
+
 let currentTime = TIMES[0];
 let currentSeats = {};
 let pendingSeatId = null;
+let allMembers = [];
+
+async function loadAllMembers() {
+  const res = await apiGet("getAllMembers");
+  allMembers = res.members || [];
+}
+
+const membersReady = loadAllMembers();
 
 function refreshTabs() {
   renderTimeTabs(timeTabsEl, TIMES, currentTime, (time) => {
@@ -48,7 +58,7 @@ function handleSeatClick(seatId, occupant) {
   }
 }
 
-function openAssignModal(seatId) {
+async function openAssignModal(seatId) {
   pendingSeatId = seatId;
   assignModalTitle.textContent = `${seatId} 좌석에 배정할 학생 검색`;
   assignSearchInput.value = "";
@@ -56,20 +66,20 @@ function openAssignModal(seatId) {
   searchResults = [];
   activeResultIndex = -1;
   assignModal.style.display = "flex";
+
+  if (!allMembers.length) {
+    assignSearchInput.disabled = true;
+    assignSearchInput.placeholder = "명단 불러오는 중...";
+    await membersReady;
+    assignSearchInput.disabled = false;
+    assignSearchInput.placeholder = "이름, 회원ID, 학년반 검색";
+  }
   assignSearchInput.focus();
 }
 
 function closeAssignModal() {
   assignModal.style.display = "none";
   pendingSeatId = null;
-}
-
-function debounce(fn, delay) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
 }
 
 let searchResults = [];
@@ -112,18 +122,26 @@ function renderResultRows(query) {
   });
 }
 
-const runSearch = debounce(async (q) => {
+/** allMembers는 페이지 로드시 한 번만 받아온 캐시라, 검색은 네트워크 왕복 없이 즉시 필터링된다. */
+function runSearch(q) {
   if (!q) {
     searchResults = [];
     activeResultIndex = -1;
     assignResults.innerHTML = "";
     return;
   }
-  const res = await apiGet("searchMembers", { q });
-  searchResults = res.results || [];
+  const query = q.toLowerCase();
+  searchResults = allMembers
+    .filter(
+      (m) =>
+        m.회원ID.toLowerCase().includes(query) ||
+        m.이름.toLowerCase().includes(query) ||
+        m.학년반.toLowerCase().includes(query)
+    )
+    .slice(0, MAX_SEARCH_RESULTS);
   activeResultIndex = searchResults.length ? 0 : -1;
   renderResultRows(q);
-}, 120);
+}
 
 function moveActiveResult(delta) {
   if (!searchResults.length) return;
@@ -133,16 +151,19 @@ function moveActiveResult(delta) {
 }
 
 async function assignMember(member) {
+  const seatId = pendingSeatId;
   const res = await apiPost("checkin", {
     회원ID: member.회원ID,
     이름: member.이름,
     학년반: member.학년반,
-    좌석: pendingSeatId,
+    좌석: seatId,
     타임: currentTime,
   });
   if (res.success) {
     closeAssignModal();
-    loadSeats();
+    // 서버에 다시 물어보지 않고 방금 배정한 좌석만 즉시 반영 (다음 15초 폴링에서 최종 동기화됨).
+    currentSeats = { ...currentSeats, [seatId]: { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 } };
+    renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
   } else {
     alert(res.error || "체크인에 실패했습니다.");
   }

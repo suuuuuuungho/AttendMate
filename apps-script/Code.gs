@@ -13,6 +13,7 @@ function doGet(e) {
   try {
     if (action === 'getMember') return respond(getMember(e.parameter.id));
     if (action === 'searchMembers') return respond(searchMembers(e.parameter.q));
+    if (action === 'getAllMembers') return respond(getAllMembers());
     if (action === 'getSeats') return respond(getSeats(e.parameter.time));
     return respond({ error: '알 수 없는 action: ' + action });
   } catch (err) {
@@ -97,6 +98,30 @@ function searchMembers(q) {
     }
   }
   return { results: results };
+}
+
+/**
+ * 전체 학생 명단을 한 번에 반환 (검색을 매 키입력마다 서버에 물어보지 않고
+ * 프론트엔드에서 캐시해 클라이언트 측 필터링에 쓰기 위함). 전화번호는 제외.
+ */
+function getAllMembers() {
+  var sheet = getMembersSheet();
+  var idCol = getColIndex(sheet, '회원ID');
+  var nameCol = getColIndex(sheet, '이름');
+  var classCol = getColIndex(sheet, '학년반');
+  if (sheet.getLastRow() < 2) return { members: [] };
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+
+  var members = [];
+  for (var i = 0; i < data.length; i++) {
+    if (!data[i][idCol]) continue;
+    members.push({
+      회원ID: String(data[i][idCol]),
+      이름: String(data[i][nameCol]),
+      학년반: String(data[i][classCol])
+    });
+  }
+  return { members: members };
 }
 
 /** 특정 타임의 좌석 점유 현황을 { 좌석: {회원ID, 이름, 학년반} } 형태로 반환. */
