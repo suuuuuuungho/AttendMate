@@ -119,4 +119,34 @@ export function renderSeatMap(container, seatStatus, opts = {}) {
 
   scrollEl.appendChild(rowsEl);
   container.appendChild(scrollEl);
+
+  lastFit = { scrollEl, rowsEl };
+  fitToWidth();
+}
+
+// 전체 좌석판이 화면 폭에 맞춰 한 번에 들어오도록 축소한다 (영화관 좌석 예매 화면처럼
+// 전체가 한눈에 보이고 두 줄이 항상 같은 비율로 함께 움직인다). 넘치면 스크롤하는 대신
+// transform: scale로 줄인다 — 화면보다 작을 때는 확대하지 않는다(scale 상한 1).
+let lastFit = null;
+
+function fitToWidth() {
+  if (!lastFit) return;
+  const { scrollEl, rowsEl } = lastFit;
+  rowsEl.style.transform = "none";
+  const contentWidth = rowsEl.scrollWidth;
+  const contentHeight = rowsEl.scrollHeight;
+  const availableWidth = scrollEl.clientWidth;
+  if (!contentWidth || !availableWidth) return;
+  const scale = Math.min(1, availableWidth / contentWidth);
+  rowsEl.style.transformOrigin = "top left";
+  rowsEl.style.transform = `scale(${scale})`;
+  scrollEl.style.height = contentHeight * scale + "px";
+}
+
+if (typeof window !== "undefined" && !window._seatMapResizeBound) {
+  window.addEventListener("resize", () => {
+    clearTimeout(window._seatMapResizeTimer);
+    window._seatMapResizeTimer = setTimeout(fitToWidth, 150);
+  });
+  window._seatMapResizeBound = true;
 }

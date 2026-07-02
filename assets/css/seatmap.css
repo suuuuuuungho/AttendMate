@@ -60,26 +60,26 @@
 }
 .seat-map__grid {
   display: grid;
-  gap: 6px;
+  gap: 3px;
 }
 
 .seat {
-  width: 52px;
-  height: 40px;
+  width: 30px;
+  height: 24px;
   font-family: var(--font-text);
-  font-size: 14px;
-  border-radius: var(--radius-xs);
+  font-size: 9px;
+  border-radius: 3px;
   border: 1px solid transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2px;
-  line-height: 1.15;
+  padding: 1px;
+  line-height: 1.1;
   transition: transform var(--transition-fast), border-color var(--transition-fast);
 }
 .seat__name {
-  font-size: 11px;
+  font-size: 7px;
   font-weight: 600;
   max-width: 100%;
   overflow: hidden;
@@ -87,7 +87,7 @@
   white-space: nowrap;
 }
 .seat__class {
-  font-size: 9px;
+  font-size: 6px;
   opacity: 0.8;
   max-width: 100%;
   overflow: hidden;
@@ -113,28 +113,31 @@
 }
 .seat:active { transform: var(--press-scale); }
 
-/* 타임 탭 — option-chip 문법 재사용 */
+/* 타임 선택 — 화면 크기와 무관하게 항상 한 줄인 드롭다운 (pill 탭은 좁은 화면에서 줄바꿈됨) */
 .time-tabs {
   display: flex;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
   justify-content: center;
   padding: var(--space-lg) var(--space-lg) 0;
 }
-.time-tab {
+.time-select {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-text);
-  font-size: var(--type-caption-size);
+  font-size: var(--type-body-size);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
-  padding: 8px 18px;
+  padding: 10px 36px 10px 20px;
+  min-width: 140px;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-ink) 50%), linear-gradient(135deg, var(--color-ink) 50%, transparent 50%);
+  background-position: calc(100% - 20px) center, calc(100% - 15px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
 }
-.time-tab--selected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
-}
+.time-select:focus { outline: 2px solid var(--color-primary-focus); outline-offset: 2px; }
 
 /* 모달 (좌석 배정용 학생 검색 / 점유 좌석 정보) */
 .modal-overlay {

@@ -42,6 +42,11 @@ function refreshTabs() {
   currentTimeLabelEl.textContent = currentTime;
 }
 
+/** 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다. */
+function renderSeatMapSkeleton() {
+  renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
+}
+
 async function loadSeats() {
   const res = await apiGet("getSeats", { time: currentTime });
   currentSeats = res.seats || {};
@@ -191,5 +196,6 @@ occupantCloseBtn.addEventListener("click", () => (occupantModal.style.display = 
 refreshBtn.addEventListener("click", loadSeats);
 
 refreshTabs();
+renderSeatMapSkeleton();
 loadSeats();
 setInterval(loadSeats, 15000);
