@@ -63,3 +63,24 @@ export function mockCheckin({ 회원ID, 이름, 학년반, 좌석, 타임 }) {
   seatsForTime[좌석] = { 회원ID, 이름, 학년반 };
   return { success: true };
 }
+
+export function mockMoveSeat({ 회원ID, 타임, 좌석 }) {
+  const seatsForTime = mockSeatLog[타임] || {};
+  if (seatsForTime[좌석]) {
+    return { success: false, error: "이미 배정된 좌석입니다: " + 좌석 };
+  }
+  const entry = Object.entries(seatsForTime).find(([, v]) => v.회원ID === 회원ID);
+  if (!entry) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
+  const [oldSeat, occupant] = entry;
+  delete seatsForTime[oldSeat];
+  seatsForTime[좌석] = occupant;
+  return { success: true };
+}
+
+export function mockCancelCheckin({ 회원ID, 타임 }) {
+  const seatsForTime = mockSeatLog[타임] || {};
+  const entry = Object.entries(seatsForTime).find(([, v]) => v.회원ID === 회원ID);
+  if (!entry) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
+  delete seatsForTime[entry[0]];
+  return { success: true };
+}

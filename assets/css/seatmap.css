@@ -33,12 +33,29 @@
   color: var(--color-ink-muted-80);
 }
 
-/* 좌석 찾기 검색 — "강단" 위, 좌석판 스케일 그룹 밖(항상 읽기 좋은 실제 크기로 유지). */
-.locate-search {
-  position: relative;
+/* 필터 드롭다운 + 좌석 찾기 검색을 한 줄로 — 모바일 세로 공간 절약. */
+.filter-and-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   max-width: 420px;
   margin: var(--space-sm) auto 0;
   padding: 0 var(--space-lg);
+}
+.filter-select {
+  flex: 0 0 auto;
+  height: 44px; /* 옆의 검색창(.search-input 44px)과 높이를 맞춘다 */
+}
+
+/* 좌석 찾기 검색 — "강단" 위, 좌석판 스케일 그룹 밖(항상 읽기 좋은 실제 크기로 유지). */
+.locate-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.filter-and-search .locate-search__results {
+  left: 0;
+  right: 0;
 }
 /* 플레이스홀더일 때는 가운데 정렬(긴 안내문구를 위해 글자 크기도 줄임), 입력이 생기면
    왼쪽 정렬로 바뀐다 — JS 없이 :placeholder-shown만으로 처리. */
@@ -203,6 +220,58 @@
 @keyframes seat-glow-pulse {
   0%, 100% { box-shadow: var(--shadow-glow); }
   50% { box-shadow: 0 0 18px 6px rgba(0, 102, 204, 0.9); }
+}
+
+/*
+ * 필터링 뷰 — 학년/반 필터가 활성화되면 배경(구역)은 어두워지고 좌석은 흐려지되,
+ * 매칭되는 좌석만 원래 색 그대로 또렷하게 남는다. exit(전체 선택)하면 원상복귀.
+ */
+.seat-map--filtering .seat-map__section {
+  background: var(--color-surface-tile-1);
+}
+.seat-map--filtering .seat-map__section-label {
+  color: var(--color-body-on-dark);
+}
+.seat-map--filtering .seat-map__stage {
+  opacity: 0.55;
+}
+.seat-map--filtering .seat {
+  opacity: 0.22;
+}
+.seat-map--filtering .seat--filter-match {
+  opacity: 1;
+}
+
+/* 자리 이동 모드 — 이동할 학생의 현재 좌석 표시 (영화관 예매의 '선택된 좌석' 느낌). */
+.seat--move-source {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  z-index: 5;
+}
+
+/* 자리 이동 모드 하단 안내 바 — 영화관 예매의 좌석 선택 안내 바. */
+.move-banner {
+  position: fixed;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: calc(100vw - 2 * var(--space-lg));
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+  border-radius: var(--radius-pill);
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+.move-banner__cancel {
+  color: var(--color-primary-on-dark);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /*

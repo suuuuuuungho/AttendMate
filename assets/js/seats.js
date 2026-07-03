@@ -1,6 +1,6 @@
 import { TIMES } from "./config.js";
 import { apiGet, apiPost } from "./api.js";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS } from "./seat-map.js";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js";
 import { renderTimeTabs } from "./time-tabs.js";
 
 const timeTabsEl = document.getElementById("timeTabs");
@@ -8,6 +8,7 @@ const seatMapEl = document.getElementById("seatMap");
 const lastUpdatedEl = document.getElementById("lastUpdated");
 const refreshBtn = document.getElementById("refreshBtn");
 const gradeLegendEl = document.getElementById("gradeLegend");
+const filterSelect = document.getElementById("filterSelect");
 
 const assignModal = document.getElementById("assignModal");
 const assignModalTitle = document.getElementById("assignModalTitle");
@@ -18,6 +19,12 @@ const assignCancelBtn = document.getElementById("assignCancelBtn");
 const occupantModal = document.getElementById("occupantModal");
 const occupantModalText = document.getElementById("occupantModalText");
 const occupantCloseBtn = document.getElementById("occupantCloseBtn");
+const occupantMoveBtn = document.getElementById("occupantMoveBtn");
+const occupantCancelCheckinBtn = document.getElementById("occupantCancelCheckinBtn");
+
+const moveBanner = document.getElementById("moveBanner");
+const moveBannerText = document.getElementById("moveBannerText");
+const moveCancelBtn = document.getElementById("moveCancelBtn");
 
 const locateSearchInput = document.getElementById("locateSearchInput");
 const locateResultsEl = document.getElementById("locateResults");
@@ -28,6 +35,9 @@ let currentTime = TIMES[0];
 let currentSeats = {};
 let pendingSeatId = null;
 let allMembers = [];
+let occupantContext = null; // 점유 좌석 모달이 어떤 좌석/학생을 보고 있는지
+let moveSource = null; // 자리 이동 모드: { seatId, occupant } — null이면 평상시
+let currentFilter = { type: "all" }; // {type:"all"} | {type:"grade", key} | {type:"class", value}
 
 async function loadAllMembers() {
   const res = await apiGet("getAllMembers");
@@ -56,14 +66,20 @@ function renderGradeLegend() {
 function refreshTabs() {
   renderTimeTabs(timeTabsEl, TIMES, currentTime, (time) => {
     currentTime = time;
+    exitMoveMode(); // 다른 타임의 좌석으로 이동해버리는 사고 방지
     refreshTabs();
     loadSeats();
   });
 }
 
-/** 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다. */
-function renderSeatMapSkeleton() {
+/**
+ * 좌석판 렌더링의 단일 진입점. renderSeatMap의 제자리 갱신(applySeatState)이
+ * 좌석 클래스를 초기화하므로, 필터 하이라이트와 이동 모드 표시를 매번 다시 입힌다.
+ */
+function rerenderSeats() {
   renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
+  applyFilter();
+  markMoveSource();
 }
 
 /** "PM 6:26" 형식 (AM/PM이 시각 앞에 옴) — Intl 로케일 포맷으로는 못 만들어서 직접 조립한다. */
@@ -78,16 +94,135 @@ function formatUpdatedTime(date) {
 async function loadSeats() {
   const res = await apiGet("getSeats", { time: currentTime });
   currentSeats = res.seats || {};
-  renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
+  rerenderSeats();
   lastUpdatedEl.textContent = formatUpdatedTime(new Date()) + " Updated";
 }
 
 function handleSeatClick(seatId, occupant) {
+  if (moveSource) {
+    if (occupant) {
+      if (occupant.회원ID !== moveSource.occupant.회원ID) {
+        alert("이미 배정된 좌석입니다. 빈 좌석을 선택해주세요.");
+      }
+      return;
+    }
+    performMove(seatId);
+    return;
+  }
   if (occupant) {
-    occupantModalText.textContent = `${seatId} — ${occupant.이름} · ${abbreviateClass(occupant.학년반)}`;
-    occupantModal.style.display = "flex";
+    openOccupantModal(seatId, occupant);
   } else {
     openAssignModal(seatId);
+  }
+}
+
+/* ===== 점유 좌석 액션 (자리 이동 / 체크인 취소) ===== */
+
+function openOccupantModal(seatId, occupant) {
+  occupantContext = { seatId, occupant };
+  occupantModalText.textContent = `${seatId} — ${occupant.이름} · ${abbreviateClass(occupant.학년반)}`;
+  occupantModal.style.display = "flex";
+}
+
+function closeOccupantModal() {
+  occupantModal.style.display = "none";
+  occupantContext = null;
+}
+
+function enterMoveMode() {
+  if (!occupantContext) return;
+  moveSource = occupantContext;
+  closeOccupantModal();
+  moveBannerText.textContent = `${moveSource.occupant.이름}님이 이동할 빈 좌석을 선택하세요`;
+  moveBanner.style.display = "flex";
+  markMoveSource();
+}
+
+function exitMoveMode() {
+  moveSource = null;
+  moveBanner.style.display = "none";
+  markMoveSource();
+}
+
+/** 이동 모드일 때 원래 좌석에 파란 외곽선 표시 (재렌더링마다 다시 입혀야 함). */
+function markMoveSource() {
+  seatMapEl.querySelectorAll(".seat--move-source").forEach((el) => el.classList.remove("seat--move-source"));
+  if (!moveSource) return;
+  seatMapEl.querySelector(`.seat[data-seat="${moveSource.seatId}"]`)?.classList.add("seat--move-source");
+}
+
+async function performMove(targetSeatId) {
+  const { seatId: fromSeatId, occupant } = moveSource;
+  const res = await apiPost("moveSeat", {
+    회원ID: occupant.회원ID,
+    타임: currentTime,
+    좌석: targetSeatId,
+  });
+  if (res.success) {
+    exitMoveMode();
+    const next = { ...currentSeats };
+    delete next[fromSeatId];
+    next[targetSeatId] = occupant;
+    currentSeats = next;
+    rerenderSeats();
+    glowSeat(targetSeatId);
+  } else {
+    alert(res.error || "자리 이동에 실패했습니다.");
+  }
+}
+
+async function cancelCheckin() {
+  if (!occupantContext) return;
+  const { seatId, occupant } = occupantContext;
+  if (!confirm(`${occupant.이름} (${seatId}) 체크인을 취소할까요?`)) return;
+  const res = await apiPost("cancelCheckin", { 회원ID: occupant.회원ID, 타임: currentTime });
+  if (res.success) {
+    closeOccupantModal();
+    const next = { ...currentSeats };
+    delete next[seatId];
+    currentSeats = next;
+    rerenderSeats();
+  } else {
+    alert(res.error || "체크인 취소에 실패했습니다.");
+  }
+}
+
+/* ===== 학년/반 필터링 뷰 ===== */
+
+function populateFilterSelect() {
+  const prev = filterSelect.value || "all";
+  const gradeOptions = GRADE_GROUPS.map(
+    (g) => `<option value="grade:${g.key}">${g.label}</option>`
+  ).join("");
+  const classes = [...new Set(allMembers.map((m) => abbreviateClass(m.학년반)).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "ko", { numeric: true })
+  );
+  const classOptions = classes.map((c) => `<option value="class:${c}">${c}</option>`).join("");
+  filterSelect.innerHTML =
+    `<option value="all">전체</option>` +
+    `<optgroup label="학년">${gradeOptions}</optgroup>` +
+    (classOptions ? `<optgroup label="반">${classOptions}</optgroup>` : "");
+  // 명단 로드 후 반 목록이 늦게 채워질 때, 이미 골라둔 필터가 있으면 유지한다.
+  filterSelect.value = [...filterSelect.options].some((o) => o.value === prev) ? prev : "all";
+}
+
+/** 필터가 켜져 있으면 배경을 어둡게 하고 매칭되는 좌석만 또렷하게 남긴다. */
+function applyFilter() {
+  const active = currentFilter.type !== "all";
+  seatMapEl.classList.toggle("seat-map--filtering", active);
+  for (const btn of seatMapEl.querySelectorAll(".seat")) {
+    let match = false;
+    if (active) {
+      const occ = currentSeats[btn.dataset.seat];
+      if (occ) {
+        if (currentFilter.type === "grade") {
+          match = getGradeGroup(occ.학년반)?.key === currentFilter.key;
+        } else {
+          match = abbreviateClass(occ.학년반) === currentFilter.value;
+        }
+      }
+    }
+    btn.classList.toggle("seat--filter-match", match);
   }
 }
 
@@ -196,7 +331,7 @@ async function assignMember(member) {
     closeAssignModal();
     // 서버에 다시 물어보지 않고 방금 배정한 좌석만 즉시 반영 (다음 15초 폴링에서 최종 동기화됨).
     currentSeats = { ...currentSeats, [seatId]: { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 } };
-    renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
+    rerenderSeats();
   } else {
     alert(res.error || "체크인에 실패했습니다.");
   }
@@ -328,11 +463,28 @@ assignSearchInput.addEventListener("keydown", (e) => {
   }
 });
 assignCancelBtn.addEventListener("click", closeAssignModal);
-occupantCloseBtn.addEventListener("click", () => (occupantModal.style.display = "none"));
+occupantCloseBtn.addEventListener("click", closeOccupantModal);
+occupantMoveBtn.addEventListener("click", enterMoveMode);
+occupantCancelCheckinBtn.addEventListener("click", cancelCheckin);
+moveCancelBtn.addEventListener("click", exitMoveMode);
 refreshBtn.addEventListener("click", loadSeats);
 
+filterSelect.addEventListener("change", () => {
+  const value = filterSelect.value;
+  if (value === "all") currentFilter = { type: "all" };
+  else if (value.startsWith("grade:")) currentFilter = { type: "grade", key: value.slice(6) };
+  else currentFilter = { type: "class", value: value.slice(6) };
+  applyFilter();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && moveSource) exitMoveMode();
+});
+
 renderGradeLegend();
+populateFilterSelect(); // 반 목록은 명단 로드 후 채워지고, 학년 그룹은 즉시 표시
+membersReady.then(populateFilterSelect);
 refreshTabs();
-renderSeatMapSkeleton();
+rerenderSeats(); // 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다
 loadSeats();
 setInterval(loadSeats, 15000);

@@ -26,6 +26,8 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
     if (action === 'checkin') return respond(checkin(body));
+    if (action === 'moveSeat') return respond(moveSeat(body));
+    if (action === 'cancelCheckin') return respond(cancelCheckin(body));
     return respond({ error: '알 수 없는 action: ' + action });
   } catch (err) {
     return respond({ error: err.message });
@@ -198,6 +200,79 @@ function checkin(body) {
     sheet.appendRow(row);
 
     return { success: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 자리 이동: 해당 타임의 기존 체크인 행을 찾아 좌석 셀만 새 좌석으로 바꾼다.
+ * body: { 회원ID, 타임, 좌석(새 좌석) }
+ */
+function moveSeat(body) {
+  var memberId = body.회원ID;
+  var time = body.타임;
+  var newSeat = body.좌석;
+  if (!memberId || !time || !newSeat) {
+    return { success: false, error: '필수 값이 없습니다 (회원ID/타임/좌석)' };
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getLogSheet();
+    var idCol = getColIndex(sheet, '회원ID');
+    var seatCol = getColIndex(sheet, '좌석');
+    var timeCol = getColIndex(sheet, '타임');
+
+    if (sheet.getLastRow() < 2) return { success: false, error: '체크인 기록이 없습니다' };
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+
+    var rowIndex = -1;
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][timeCol]) !== String(time)) continue;
+      if (String(data[i][seatCol]) === String(newSeat)) {
+        return { success: false, error: '이미 배정된 좌석입니다: ' + newSeat };
+      }
+      if (String(data[i][idCol]) === String(memberId)) rowIndex = i;
+    }
+    if (rowIndex === -1) return { success: false, error: '체크인 기록을 찾을 수 없습니다' };
+
+    sheet.getRange(rowIndex + 2, seatCol + 1).setValue(newSeat);
+    return { success: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 체크인 취소: 해당 타임의 체크인 행을 log에서 삭제한다.
+ * body: { 회원ID, 타임 }
+ */
+function cancelCheckin(body) {
+  var memberId = body.회원ID;
+  var time = body.타임;
+  if (!memberId || !time) {
+    return { success: false, error: '필수 값이 없습니다 (회원ID/타임)' };
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = getLogSheet();
+    var idCol = getColIndex(sheet, '회원ID');
+    var timeCol = getColIndex(sheet, '타임');
+
+    if (sheet.getLastRow() < 2) return { success: false, error: '체크인 기록이 없습니다' };
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][timeCol]) === String(time) && String(data[i][idCol]) === String(memberId)) {
+        sheet.deleteRow(i + 2);
+        return { success: true };
+      }
+    }
+    return { success: false, error: '체크인 기록을 찾을 수 없습니다' };
   } finally {
     lock.releaseLock();
   }

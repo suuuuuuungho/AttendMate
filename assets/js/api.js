@@ -1,5 +1,13 @@
 import { APPS_SCRIPT_URL } from "./config.js";
-import { mockGetMember, mockSearchMembers, mockGetAllMembers, mockGetSeats, mockCheckin } from "./mock.js";
+import {
+  mockGetMember,
+  mockSearchMembers,
+  mockGetAllMembers,
+  mockGetSeats,
+  mockCheckin,
+  mockMoveSeat,
+  mockCancelCheckin,
+} from "./mock.js";
 
 const USE_MOCK = !APPS_SCRIPT_URL;
 
@@ -38,5 +46,7 @@ function mockGet(action, params) {
 
 function mockPost(action, body) {
   if (action === "checkin") return mockCheckin(body);
+  if (action === "moveSeat") return mockMoveSeat(body);
+  if (action === "cancelCheckin") return mockCancelCheckin(body);
   return { error: "알 수 없는 action: " + action };
 }

@@ -30,9 +30,12 @@
 <div class="sticky-toolbar">
   <div id="gradeLegend" class="grade-legend"></div>
 
-  <div class="locate-search">
-    <input id="locateSearchInput" class="search-input" style="width:100%;" type="text" placeholder="학생 이름을 입력하여 위치를 확인해보세요">
-    <div id="locateResults" class="locate-search__results" style="display:none;"></div>
+  <div class="filter-and-search">
+    <select id="filterSelect" class="time-select filter-select" title="학년/반 필터"></select>
+    <div class="locate-search">
+      <input id="locateSearchInput" class="search-input" style="width:100%;" type="text" placeholder="학생 이름을 입력하여 위치를 확인해보세요">
+      <div id="locateResults" class="locate-search__results" style="display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -52,10 +55,15 @@
 <div id="occupantModal" class="modal-overlay" style="display:none;">
   <div class="modal-panel">
     <h3 class="text-body-strong on-light" id="occupantModalText"></h3>
-    <div style="display:flex; gap:8px; justify-content:flex-end;">
-      <button id="occupantCloseBtn" class="btn-primary">확인</button>
-    </div>
+    <button id="occupantMoveBtn" class="btn-primary" style="width:100%;">자리 이동</button>
+    <button id="occupantCancelCheckinBtn" class="btn-secondary-pill" style="width:100%;">체크인 취소</button>
+    <button id="occupantCloseBtn" class="btn-secondary-pill" style="width:100%; border-color:var(--color-hairline); color:var(--color-ink-muted-80);">닫기</button>
   </div>
+</div>
+
+<div id="moveBanner" class="move-banner" style="display:none;">
+  <span id="moveBannerText" class="text-caption"></span>
+  <button id="moveCancelBtn" type="button" class="move-banner__cancel">취소</button>
 </div>
 
 <script type="module" src="assets/js/seats.js"></script>
