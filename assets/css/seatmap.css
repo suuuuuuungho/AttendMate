@@ -240,6 +240,8 @@
 }
 .seat-map--filtering .seat--filter-match {
   opacity: 1;
+  box-shadow: var(--shadow-glow);
+  z-index: 4;
 }
 
 /* 자리 이동 모드 — 이동할 학생의 현재 좌석 표시 (영화관 예매의 '선택된 좌석' 느낌). */
@@ -273,6 +275,29 @@
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* 배정/이동/취소 진행 상태 토스트 — 낙관적 업데이트로 화면은 바로 바뀌지만,
+   실제 서버 처리 중/완료/실패를 텍스트로 알려준다. */
+.toast {
+  position: fixed;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 260;
+  max-width: calc(100vw - 2 * var(--space-lg));
+  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  color: var(--color-on-dark);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toast--processing { background: var(--color-ink-muted-48); }
+.toast--success { background: var(--color-primary); }
+.toast--error { background: var(--color-ink); }
 
 /*
  * 타임 선택 — 서브내비 우측(예전 "n타임" 표시 자리)에 들어가는 컴팩트 드롭다운.

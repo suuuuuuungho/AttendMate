@@ -82,6 +82,40 @@ function rerenderSeats() {
   markMoveSource();
 }
 
+/**
+ * 배정/이동/취소는 Apps Script 왕복(보통 1~3초, 가끔 더 걸림) 때문에 기다리는 동안
+ * "아무 반응이 없다"는 인상을 준다. 그래서 화면은 낙관적으로 바로 갱신해 즉시
+ * 반응하는 것처럼 보이게 하고, 이 토스트로 실제 처리 중/완료/실패 상태를 알려준다.
+ * 실패하면 호출부에서 낙관적으로 바꿔둔 상태를 되돌린다.
+ */
+let activeToastEl = null;
+function showProcessingToast(text) {
+  if (activeToastEl) activeToastEl.remove();
+  const el = document.createElement("div");
+  el.className = "toast toast--processing";
+  el.textContent = text;
+  document.body.appendChild(el);
+  activeToastEl = el;
+  return {
+    complete(msg) {
+      el.className = "toast toast--success";
+      el.textContent = msg;
+      setTimeout(() => {
+        if (activeToastEl === el) activeToastEl = null;
+        el.remove();
+      }, 1800);
+    },
+    fail(msg) {
+      el.className = "toast toast--error";
+      el.textContent = msg;
+      setTimeout(() => {
+        if (activeToastEl === el) activeToastEl = null;
+        el.remove();
+      }, 2500);
+    },
+  };
+}
+
 /** "PM 6:26" 형식 (AM/PM이 시각 앞에 옴) — Intl 로케일 포맷으로는 못 만들어서 직접 조립한다. */
 function formatUpdatedTime(date) {
   const hours24 = date.getHours();
@@ -153,21 +187,25 @@ function markMoveSource() {
 
 async function performMove(targetSeatId) {
   const { seatId: fromSeatId, occupant } = moveSource;
-  const res = await apiPost("moveSeat", {
-    회원ID: occupant.회원ID,
-    타임: currentTime,
-    좌석: targetSeatId,
-  });
+  exitMoveMode();
+
+  // 낙관적 업데이트: 서버 응답을 기다리지 않고 화면부터 옮겨서 즉시 반응하게 한다.
+  const prevSeats = currentSeats;
+  const next = { ...currentSeats };
+  delete next[fromSeatId];
+  next[targetSeatId] = occupant;
+  currentSeats = next;
+  rerenderSeats();
+  glowSeat(targetSeatId);
+
+  const toast = showProcessingToast("자리 이동 처리 중입니다...");
+  const res = await apiPost("moveSeat", { 회원ID: occupant.회원ID, 타임: currentTime, 좌석: targetSeatId });
   if (res.success) {
-    exitMoveMode();
-    const next = { ...currentSeats };
-    delete next[fromSeatId];
-    next[targetSeatId] = occupant;
-    currentSeats = next;
-    rerenderSeats();
-    glowSeat(targetSeatId);
+    toast.complete(`${occupant.이름}님 ${targetSeatId}로 이동 완료했습니다`);
   } else {
-    alert(res.error || "자리 이동에 실패했습니다.");
+    currentSeats = prevSeats; // 서버가 거절했으니 화면도 원래대로 되돌린다
+    rerenderSeats();
+    toast.fail(res.error || "자리 이동에 실패했습니다.");
   }
 }
 
@@ -175,15 +213,22 @@ async function cancelCheckin() {
   if (!occupantContext) return;
   const { seatId, occupant } = occupantContext;
   if (!confirm(`${occupant.이름} (${seatId}) 체크인을 취소할까요?`)) return;
+  closeOccupantModal();
+
+  const prevSeats = currentSeats;
+  const next = { ...currentSeats };
+  delete next[seatId];
+  currentSeats = next;
+  rerenderSeats();
+
+  const toast = showProcessingToast("체크인 취소 처리 중입니다...");
   const res = await apiPost("cancelCheckin", { 회원ID: occupant.회원ID, 타임: currentTime });
   if (res.success) {
-    closeOccupantModal();
-    const next = { ...currentSeats };
-    delete next[seatId];
-    currentSeats = next;
-    rerenderSeats();
+    toast.complete(`${occupant.이름}님 체크인 취소 완료했습니다`);
   } else {
-    alert(res.error || "체크인 취소에 실패했습니다.");
+    currentSeats = prevSeats;
+    rerenderSeats();
+    toast.fail(res.error || "체크인 취소에 실패했습니다.");
   }
 }
 
@@ -320,6 +365,14 @@ function moveActiveResult(delta) {
 
 async function assignMember(member) {
   const seatId = pendingSeatId;
+  closeAssignModal();
+
+  // 낙관적 업데이트: 서버 응답을 기다리지 않고 화면부터 배정 처리해 즉시 반응하게 한다.
+  const prevSeats = currentSeats;
+  currentSeats = { ...currentSeats, [seatId]: { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 } };
+  rerenderSeats();
+
+  const toast = showProcessingToast("배정 처리 중입니다...");
   const res = await apiPost("checkin", {
     회원ID: member.회원ID,
     이름: member.이름,
@@ -328,12 +381,11 @@ async function assignMember(member) {
     타임: currentTime,
   });
   if (res.success) {
-    closeAssignModal();
-    // 서버에 다시 물어보지 않고 방금 배정한 좌석만 즉시 반영 (다음 15초 폴링에서 최종 동기화됨).
-    currentSeats = { ...currentSeats, [seatId]: { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 } };
-    rerenderSeats();
+    toast.complete(`${member.이름}님 ${seatId} 배정 완료했습니다`);
   } else {
-    alert(res.error || "체크인에 실패했습니다.");
+    currentSeats = prevSeats;
+    rerenderSeats();
+    toast.fail(res.error || "체크인에 실패했습니다.");
   }
 }
 
