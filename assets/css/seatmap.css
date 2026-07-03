@@ -60,7 +60,7 @@
 /* 플레이스홀더일 때는 가운데 정렬(긴 안내문구를 위해 글자 크기도 줄임), 입력이 생기면
    왼쪽 정렬로 바뀐다 — JS 없이 :placeholder-shown만으로 처리. */
 #locateSearchInput {
-  font-size: 14px;
+  font-size: 12px;
   text-align: center;
 }
 #locateSearchInput:not(:placeholder-shown) {
