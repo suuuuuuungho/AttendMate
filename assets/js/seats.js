@@ -34,6 +34,11 @@ const MAX_SEARCH_RESULTS = 20;
 let currentTime = TIMES[0];
 let currentSeats = {};
 let pendingSeatId = null;
+// 배정/이동/취소가 진행 중일 때 걸어두는 락. 이 동안 도착하는 폴링 응답은
+// 아직 반영 안 된 서버 상태(구 데이터)를 담고 있을 수 있어 낙관적 업데이트를
+// 덮어써버리므로 무시한다 — "이동했는데 잠시 후 원래 자리로 돌아옴" 버그의 원인.
+let pendingMutationCount = 0;
+let seatsRequestSeq = 0; // 탭 전환 등으로 폴링이 겹칠 때 오래된 응답을 무시하기 위한 순번
 let allMembers = [];
 let occupantContext = null; // 점유 좌석 모달이 어떤 좌석/학생을 보고 있는지
 let moveSource = null; // 자리 이동 모드: { seatId, occupant } — null이면 평상시
@@ -126,7 +131,12 @@ function formatUpdatedTime(date) {
 }
 
 async function loadSeats() {
-  const res = await apiGet("getSeats", { time: currentTime });
+  const seq = ++seatsRequestSeq;
+  const requestedTime = currentTime;
+  const res = await apiGet("getSeats", { time: requestedTime });
+  if (seq !== seatsRequestSeq) return; // 더 최근 폴링(탭 전환 등)에 의해 대체됨
+  if (requestedTime !== currentTime) return; // 응답 도착 전에 다른 타임으로 전환됨
+  if (pendingMutationCount > 0) return; // 배정/이동/취소 진행 중 — 그 결과가 최종 상태를 반영한다
   currentSeats = res.seats || {};
   rerenderSeats();
   lastUpdatedEl.textContent = formatUpdatedTime(new Date()) + " Updated";
@@ -199,13 +209,22 @@ async function performMove(targetSeatId) {
   glowSeat(targetSeatId);
 
   const toast = showProcessingToast("자리 이동 처리 중입니다...");
-  const res = await apiPost("moveSeat", { 회원ID: occupant.회원ID, 타임: currentTime, 좌석: targetSeatId });
-  if (res.success) {
-    toast.complete(`${occupant.이름}님 ${targetSeatId}로 이동 완료했습니다`);
-  } else {
-    currentSeats = prevSeats; // 서버가 거절했으니 화면도 원래대로 되돌린다
+  pendingMutationCount++;
+  try {
+    const res = await apiPost("moveSeat", { 회원ID: occupant.회원ID, 타임: currentTime, 좌석: targetSeatId });
+    if (res.success) {
+      toast.complete(`${occupant.이름}님 ${targetSeatId}로 이동 완료했습니다`);
+    } else {
+      currentSeats = prevSeats; // 서버가 거절했으니 화면도 원래대로 되돌린다
+      rerenderSeats();
+      toast.fail(res.error || "자리 이동에 실패했습니다.");
+    }
+  } catch (e) {
+    currentSeats = prevSeats;
     rerenderSeats();
-    toast.fail(res.error || "자리 이동에 실패했습니다.");
+    toast.fail("네트워크 오류로 자리 이동에 실패했습니다.");
+  } finally {
+    pendingMutationCount--;
   }
 }
 
@@ -222,13 +241,22 @@ async function cancelCheckin() {
   rerenderSeats();
 
   const toast = showProcessingToast("체크인 취소 처리 중입니다...");
-  const res = await apiPost("cancelCheckin", { 회원ID: occupant.회원ID, 타임: currentTime });
-  if (res.success) {
-    toast.complete(`${occupant.이름}님 체크인 취소 완료했습니다`);
-  } else {
+  pendingMutationCount++;
+  try {
+    const res = await apiPost("cancelCheckin", { 회원ID: occupant.회원ID, 타임: currentTime });
+    if (res.success) {
+      toast.complete(`${occupant.이름}님 체크인 취소 완료했습니다`);
+    } else {
+      currentSeats = prevSeats;
+      rerenderSeats();
+      toast.fail(res.error || "체크인 취소에 실패했습니다.");
+    }
+  } catch (e) {
     currentSeats = prevSeats;
     rerenderSeats();
-    toast.fail(res.error || "체크인 취소에 실패했습니다.");
+    toast.fail("네트워크 오류로 체크인 취소에 실패했습니다.");
+  } finally {
+    pendingMutationCount--;
   }
 }
 
@@ -373,19 +401,28 @@ async function assignMember(member) {
   rerenderSeats();
 
   const toast = showProcessingToast("배정 처리 중입니다...");
-  const res = await apiPost("checkin", {
-    회원ID: member.회원ID,
-    이름: member.이름,
-    학년반: member.학년반,
-    좌석: seatId,
-    타임: currentTime,
-  });
-  if (res.success) {
-    toast.complete(`${member.이름}님 ${seatId} 배정 완료했습니다`);
-  } else {
+  pendingMutationCount++;
+  try {
+    const res = await apiPost("checkin", {
+      회원ID: member.회원ID,
+      이름: member.이름,
+      학년반: member.학년반,
+      좌석: seatId,
+      타임: currentTime,
+    });
+    if (res.success) {
+      toast.complete(`${member.이름}님 ${seatId} 배정 완료했습니다`);
+    } else {
+      currentSeats = prevSeats;
+      rerenderSeats();
+      toast.fail(res.error || "체크인에 실패했습니다.");
+    }
+  } catch (e) {
     currentSeats = prevSeats;
     rerenderSeats();
-    toast.fail(res.error || "체크인에 실패했습니다.");
+    toast.fail("네트워크 오류로 배정에 실패했습니다.");
+  } finally {
+    pendingMutationCount--;
   }
 }
 

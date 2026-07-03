@@ -66,6 +66,9 @@
 #locateSearchInput:not(:placeholder-shown) {
   text-align: left;
 }
+#locateSearchInput::placeholder {
+  font-size: 12px;
+}
 .locate-search__results {
   position: absolute;
   left: var(--space-lg);
