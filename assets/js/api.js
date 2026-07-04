@@ -1,4 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import {
   mockGetMember,
@@ -11,10 +10,21 @@ import {
 } from "./mock.js";
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
-const supabase = USE_MOCK ? null : createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const headers = () => ({
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_ANON_KEY,
+  "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+});
 
 function toMember(row) {
   return { 회원ID: String(row.ID), 이름: row.Name, 학년반: row.Division };
+}
+
+function encodeFilter(col, op, val) {
+  if (op === "eq") return `${col}=eq.${encodeURIComponent(val)}`;
+  if (op === "in") return `${col}=in.(${val.join(",")})`;
+  return `${col}=${op}.${encodeURIComponent(val)}`;
 }
 
 export async function apiGet(action, params = {}) {
@@ -38,14 +48,10 @@ export async function apiPost(action, body) {
  * Log 테이블 변경(체크인/이동/취소)을 실시간으로 구독한다. 다른 사용자의 변경이
  * 즉시 반영되도록 seats.js가 이 콜백에서 좌석 목록을 다시 불러온다.
  * 구독 해제 함수를 반환한다.
+ * (폴링으로 대체 — seats.js의 setInterval(loadSeats, 15000)이 대신함)
  */
 export function subscribeToSeatChanges(onChange) {
-  if (USE_MOCK) return () => {};
-  const channel = supabase
-    .channel("log-changes")
-    .on("postgres_changes", { event: "*", schema: "public", table: "Log" }, onChange)
-    .subscribe();
-  return () => supabase.removeChannel(channel);
+  return () => {};
 }
 
 function mockGet(action, params) {
@@ -65,35 +71,62 @@ function mockPost(action, body) {
 
 async function getMember(id) {
   if (!id || Number.isNaN(Number(id))) return { found: false };
-  const { data, error } = await supabase.from("Member").select("ID,Name,Division").eq("ID", Number(id)).maybeSingle();
-  if (error || !data) return { found: false };
-  return { found: true, ...toMember(data) };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Member?ID=eq.${Number(id)}&select=ID,Name,Division`, {
+      headers: headers(),
+    });
+    const data = await res.json();
+    if (!data || !data.length) return { found: false };
+    return { found: true, ...toMember(data[0]) };
+  } catch (e) {
+    return { found: false };
+  }
 }
 
 async function searchMembers(q) {
   if (!q) return { results: [] };
-  const orParts = [`Name.ilike.%${q}%`, `Division.ilike.%${q}%`];
-  if (!Number.isNaN(Number(q))) orParts.push(`ID.eq.${Number(q)}`);
-  const { data, error } = await supabase.from("Member").select("ID,Name,Division").or(orParts.join(",")).limit(20);
-  if (error) return { results: [] };
-  return { results: (data || []).map(toMember) };
+  try {
+    let orFilter = `Name.ilike.*${q}*,Division.ilike.*${q}*`;
+    if (!Number.isNaN(Number(q))) orFilter += `,ID.eq.${Number(q)}`;
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/Member?or=(${encodeURIComponent(orFilter)})&select=ID,Name,Division&limit=20`,
+      { headers: headers() }
+    );
+    const data = await res.json();
+    return { results: (data || []).map(toMember) };
+  } catch (e) {
+    return { results: [] };
+  }
 }
 
 async function getAllMembers() {
-  const { data, error } = await supabase.from("Member").select("ID,Name,Division");
-  if (error) return { members: [] };
-  return { members: (data || []).map(toMember) };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Member?select=ID,Name,Division`, {
+      headers: headers(),
+    });
+    const data = await res.json();
+    return { members: (data || []).map(toMember) };
+  } catch (e) {
+    return { members: [] };
+  }
 }
 
 async function getSeats(time) {
   if (!time) return { seats: {} };
-  const { data, error } = await supabase.from("Log").select("ID,Name,Division,Seat,Time").eq("Time", time);
-  if (error) return { seats: {} };
-  const seats = {};
-  for (const row of data || []) {
-    seats[row.Seat] = toMember(row);
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/Log?select=ID,Name,Division,Seat,Time&"Time"=eq.${encodeURIComponent(time)}`,
+      { headers: headers() }
+    );
+    const data = await res.json();
+    const seats = {};
+    for (const row of data || []) {
+      seats[row.Seat] = toMember(row);
+    }
+    return { seats };
+  } catch (e) {
+    return { seats: {} };
   }
-  return { seats };
 }
 
 async function checkin(body) {
@@ -106,27 +139,35 @@ async function checkin(body) {
     return { success: false, error: "필수 값이 없습니다 (회원ID/좌석/타임)" };
   }
 
-  const { error } = await supabase.from("Log").insert({
-    "ID": Number(memberId),
-    "Name": name,
-    "Division": cls,
-    "Seat": seat,
-    "Time": time,
-    "Timestamp": new Date().toISOString(),
-  });
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Log`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        "ID": Number(memberId),
+        "Name": name,
+        "Division": cls,
+        "Seat": seat,
+        "Time": time,
+        "Timestamp": new Date().toISOString(),
+      }),
+    });
 
-  if (!error) return { success: true };
-  if (error.code === "23505") {
-    const { data: existing } = await supabase
-      .from("Log")
-      .select("Seat")
-      .eq("Time", time)
-      .eq("ID", Number(memberId))
-      .maybeSingle();
-    if (existing) return { success: false, error: `이미 체크인되었습니다 (좌석 ${existing.Seat})` };
-    return { success: false, error: "이미 배정된 좌석입니다: " + seat };
+    if (res.status === 201) return { success: true };
+
+    const data = await res.json();
+    if (res.status === 409) {
+      const existing = await fetch(
+        `${SUPABASE_URL}/rest/v1/Log?select=Seat&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+        { headers: headers() }
+      ).then(r => r.json());
+      if (existing && existing.length) return { success: false, error: `이미 체크인되었습니다 (좌석 ${existing[0].Seat})` };
+      return { success: false, error: "이미 배정된 좌석입니다: " + seat };
+    }
+    return { success: false, error: data.message || "체크인에 실패했습니다" };
+  } catch (e) {
+    return { success: false, error: "네트워크 오류: " + e.message };
   }
-  return { success: false, error: error.message };
 }
 
 async function moveSeat(body) {
@@ -137,19 +178,31 @@ async function moveSeat(body) {
     return { success: false, error: "필수 값이 없습니다 (회원ID/타임/좌석)" };
   }
 
-  const { data, error } = await supabase
-    .from("Log")
-    .update({ "Seat": newSeat, "Timestamp": new Date().toISOString() })
-    .eq("ID", Number(memberId))
-    .eq("Time", time)
-    .select();
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/Log?select=*&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+      {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify({
+          "Seat": newSeat,
+          "Timestamp": new Date().toISOString(),
+        }),
+      }
+    );
 
-  if (error) {
-    if (error.code === "23505") return { success: false, error: "이미 배정된 좌석입니다: " + newSeat };
-    return { success: false, error: error.message };
+    if (res.status === 409) return { success: false, error: "이미 배정된 좌석입니다: " + newSeat };
+    if (res.status !== 200 && res.status !== 204) {
+      const data = await res.json();
+      return { success: false, error: data.message || "자리 이동에 실패했습니다" };
+    }
+
+    const data = await res.json();
+    if (!data || !data.length) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: "네트워크 오류: " + e.message };
   }
-  if (!data || !data.length) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
-  return { success: true };
 }
 
 async function cancelCheckin(body) {
@@ -159,9 +212,24 @@ async function cancelCheckin(body) {
     return { success: false, error: "필수 값이 없습니다 (회원ID/타임)" };
   }
 
-  const { data, error } = await supabase.from("Log").delete().eq("ID", Number(memberId)).eq("Time", time).select();
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/Log?select=*&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+      {
+        method: "DELETE",
+        headers: headers(),
+      }
+    );
 
-  if (error) return { success: false, error: error.message };
-  if (!data || !data.length) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
-  return { success: true };
+    if (res.status !== 200 && res.status !== 204) {
+      const data = await res.json();
+      return { success: false, error: data.message || "체크인 취소에 실패했습니다" };
+    }
+
+    const data = await res.json();
+    if (!data || !data.length) return { success: false, error: "체크인 기록을 찾을 수 없습니다" };
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: "네트워크 오류: " + e.message };
+  }
 }
