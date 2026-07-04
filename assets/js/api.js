@@ -107,12 +107,12 @@ async function checkin(body) {
   }
 
   const { error } = await supabase.from("Log").insert({
-    ID: Number(memberId),
-    Name: name,
-    Division: cls,
-    Seat: seat,
-    Time: time,
-    Timestamp: new Date().toISOString(),
+    "ID": Number(memberId),
+    "Name": name,
+    "Division": cls,
+    "Seat": seat,
+    "Time": time,
+    "Timestamp": new Date().toISOString(),
   });
 
   if (!error) return { success: true };
@@ -139,7 +139,7 @@ async function moveSeat(body) {
 
   const { data, error } = await supabase
     .from("Log")
-    .update({ Seat: newSeat, Timestamp: new Date().toISOString() })
+    .update({ "Seat": newSeat, "Timestamp": new Date().toISOString() })
     .eq("ID", Number(memberId))
     .eq("Time", time)
     .select();
