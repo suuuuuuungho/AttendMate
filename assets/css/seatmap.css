@@ -10,27 +10,31 @@
   padding-bottom: var(--space-sm);
 }
 
-/* 학년/부서 색상 범례 — 좌석 배경색만으로는 어떤 색이 어떤 학년인지 알 수 없어서 필요하다. */
+/* 학년/부서 색상 범례 — 좌석 배경색만으로는 어떤 색이 어떤 학년인지 알 수 없어서 필요하다.
+   교사가 추가되며 항목이 6개가 돼 좁은 화면에서 두 줄로 밀렸다 — 한 줄에 다 들어오도록
+   여백/폰트/스와치를 모두 줄인다. */
 .grade-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: 6px 10px;
   justify-content: center;
-  padding: var(--space-sm) var(--space-lg) 0;
+  padding: var(--space-xs) var(--space-lg) 0;
 }
 .grade-legend__item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .grade-legend__swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 .grade-legend__label {
   color: var(--color-ink-muted-80);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* 필터 드롭다운 + 좌석 찾기 검색을 한 줄로 — 모바일 세로 공간 절약. */
@@ -217,6 +221,7 @@
 .seat--grade3 { background: var(--color-grade-3); color: var(--color-grade-text); }
 .seat--new { background: var(--color-grade-new); color: var(--color-grade-text); }
 .seat--longterm { background: var(--color-grade-longterm); color: var(--color-grade-text); }
+.seat--teacher { background: var(--color-grade-teacher); color: var(--color-grade-text); }
 .seat--grade-other { background: var(--color-status-taken); color: var(--color-status-taken-text); }
 
 .seat:active { transform: var(--press-scale); }
