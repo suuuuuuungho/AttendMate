@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704b";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704d";
 import {
   mockGetMember,
   mockSearchMembers,
@@ -7,7 +7,7 @@ import {
   mockCheckin,
   mockMoveSeat,
   mockCancelCheckin,
-} from "./mock.js?v=20260704b";
+} from "./mock.js?v=20260704d";
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
@@ -24,6 +24,27 @@ const returnRepresentation = () => headers({ Prefer: "return=representation" });
 
 function toMember(row) {
   return { 회원ID: String(row.ID), 이름: row.Name, 학년반: row.Division };
+}
+
+// PostgREST는 명시적으로 페이지를 나누지 않으면 기본 1000행에서 잘라버린다.
+// 회원(Member) 명단이 1000명을 넘으면 뒤쪽 학생/교사가 통째로 누락되므로
+// (실제로 1487명이라 487명이 잘렸었다), 다 받을 때까지 반복 조회한다.
+const PAGE_SIZE = 1000;
+async function fetchAllRows(path) {
+  let all = [];
+  let offset = 0;
+  while (true) {
+    const sep = path.includes("?") ? "&" : "?";
+    const res = await fetch(`${SUPABASE_URL}${path}${sep}limit=${PAGE_SIZE}&offset=${offset}`, {
+      headers: headers(),
+    });
+    const page = await res.json();
+    if (!Array.isArray(page) || !page.length) break;
+    all = all.concat(page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
 }
 
 export async function apiGet(action, params = {}) {
@@ -100,11 +121,8 @@ async function searchMembers(q) {
 
 async function getAllMembers() {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Member?select=ID,Name,Division`, {
-      headers: headers(),
-    });
-    const data = await res.json();
-    return { members: (data || []).map(toMember) };
+    const data = await fetchAllRows(`/rest/v1/Member?select=ID,Name,Division`);
+    return { members: data.map(toMember) };
   } catch (e) {
     return { members: [] };
   }
@@ -113,13 +131,11 @@ async function getAllMembers() {
 async function getSeats(time) {
   if (!time) return { seats: {} };
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/Log?select=ID,Name,Division,Seat,Time&Time=eq.${encodeURIComponent(time)}`,
-      { headers: headers() }
+    const data = await fetchAllRows(
+      `/rest/v1/Log?select=ID,Name,Division,Seat,Time&Time=eq.${encodeURIComponent(time)}`
     );
-    const data = await res.json();
     const seats = {};
-    for (const row of data || []) {
+    for (const row of data) {
       seats[row.Seat] = toMember(row);
     }
     return { seats };

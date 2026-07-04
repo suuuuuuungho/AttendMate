@@ -1,7 +1,7 @@
-import { TIMES } from "./config.js?v=20260704b";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260704b";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260704b";
-import { renderTimeTabs } from "./time-tabs.js?v=20260704b";
+import { TIMES } from "./config.js?v=20260704d";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260704d";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260704d";
+import { renderTimeTabs } from "./time-tabs.js?v=20260704d";
 
 const timeTabsEl = document.getElementById("timeTabs");
 const seatMapEl = document.getElementById("seatMap");
@@ -25,6 +25,11 @@ const occupantCancelCheckinBtn = document.getElementById("occupantCancelCheckinB
 const moveBanner = document.getElementById("moveBanner");
 const moveBannerText = document.getElementById("moveBannerText");
 const moveCancelBtn = document.getElementById("moveCancelBtn");
+
+const unassignedSectionEl = document.getElementById("unassignedSection");
+const unassignedGroupsEl = document.getElementById("unassignedGroups");
+// 통계 페이지의 "출석 수정"이 실제 좌석 없이 출석 처리할 때 쓰는 자리표식과 반드시 같은 값이어야 한다.
+const UNASSIGNED_SEAT_PREFIX = "UNASSIGNED-";
 
 const locateSearchInput = document.getElementById("locateSearchInput");
 const locateResultsEl = document.getElementById("locateResults");
@@ -85,6 +90,58 @@ function rerenderSeats() {
   renderSeatMap(seatMapEl, currentSeats, { selectable: true, onSeatClick: handleSeatClick });
   applyFilter();
   markMoveSource();
+  renderUnassignedPanel();
+}
+
+/**
+ * 통계 페이지의 "출석 수정"으로 실제 좌석 없이 출석 처리된 학생들 — currentSeats에는
+ * 있지만 좌석판의 실제 좌석 버튼(A1~H90)에는 그려지지 않는 UNASSIGNED_SEAT_PREFIX
+ * 항목들을 모아 학년별 블록으로 보여준다. 블록을 클릭하면 이동 모드로 들어가
+ * 기존 "자리 이동" 흐름 그대로 빈 좌석을 골라 실제 좌석을 배정할 수 있다.
+ */
+function renderUnassignedPanel() {
+  const entries = Object.entries(currentSeats).filter(([seatId]) => seatId.startsWith(UNASSIGNED_SEAT_PREFIX));
+  unassignedGroupsEl.innerHTML = "";
+  unassignedSectionEl.style.display = entries.length ? "block" : "none";
+  if (!entries.length) return;
+
+  const groups = [...GRADE_GROUPS, { key: "other", label: "기타", cssVar: null }];
+  for (const group of groups) {
+    const members = entries.filter(([, occ]) => (getGradeGroup(occ.학년반)?.key || "other") === group.key);
+    if (!members.length) continue;
+
+    const groupEl = document.createElement("div");
+    groupEl.className = "unassigned-grade";
+    if (group.cssVar) groupEl.style.setProperty("--grade-color", `var(${group.cssVar})`);
+
+    const label = document.createElement("div");
+    label.className = "unassigned-grade__label text-caption-strong";
+    label.textContent = `${group.label} (${members.length}명)`;
+    groupEl.appendChild(label);
+
+    const chips = document.createElement("div");
+    chips.className = "unassigned-grade__chips";
+    for (const [seatId, occ] of members) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "unassigned-chip";
+      if (moveSource && moveSource.seatId === seatId) chip.classList.add("unassigned-chip--move-source");
+      chip.textContent = `${occ.이름} · ${abbreviateClass(occ.학년반)}`;
+      chip.addEventListener("click", () => startAssignFromUnassigned(seatId, occ));
+      chips.appendChild(chip);
+    }
+    groupEl.appendChild(chips);
+    unassignedGroupsEl.appendChild(groupEl);
+  }
+}
+
+function startAssignFromUnassigned(seatId, occupant) {
+  if (moveSource && moveSource.seatId === seatId) return; // 이미 이 학생을 이동 중
+  moveSource = { seatId, occupant };
+  moveBannerText.textContent = `${occupant.이름}님이 배정될 빈 좌석을 선택하세요`;
+  moveBanner.style.display = "flex";
+  markMoveSource();
+  renderUnassignedPanel();
 }
 
 /**
@@ -180,12 +237,14 @@ function enterMoveMode() {
   moveBannerText.textContent = `${moveSource.occupant.이름}님이 이동할 빈 좌석을 선택하세요`;
   moveBanner.style.display = "flex";
   markMoveSource();
+  renderUnassignedPanel();
 }
 
 function exitMoveMode() {
   moveSource = null;
   moveBanner.style.display = "none";
   markMoveSource();
+  renderUnassignedPanel();
 }
 
 /** 이동 모드일 때 원래 좌석에 파란 외곽선 표시 (재렌더링마다 다시 입혀야 함). */

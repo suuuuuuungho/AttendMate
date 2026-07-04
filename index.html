@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>좌석 배치 현황 — AttendMate</title>
     <meta name="description" content="AttendMate 좌석 배치 현황 및 출석 체크" />
-    <link rel="stylesheet" href="assets/css/tokens.css?v=20260704b" />
-    <link rel="stylesheet" href="assets/css/base.css?v=20260704b" />
-    <link rel="stylesheet" href="assets/css/components.css?v=20260704b" />
-    <link rel="stylesheet" href="assets/css/seatmap.css?v=20260704b" />
+    <link rel="stylesheet" href="assets/css/tokens.css?v=20260704d" />
+    <link rel="stylesheet" href="assets/css/base.css?v=20260704d" />
+    <link rel="stylesheet" href="assets/css/components.css?v=20260704d" />
+    <link rel="stylesheet" href="assets/css/seatmap.css?v=20260704d" />
   </head>
   <body>
     <nav class="global-nav">
@@ -57,6 +57,17 @@
     </div>
 
     <div id="seatMap"></div>
+
+    <section
+      id="unassignedSection"
+      class="unassigned-section"
+      style="display: none"
+    >
+      <h2 class="unassigned-section__title text-body-strong on-light">
+        출석했지만 자리는 미배정된 학생들
+      </h2>
+      <div id="unassignedGroups" class="unassigned-groups"></div>
+    </section>
 
     <div id="assignModal" class="modal-overlay" style="display: none">
       <div class="modal-panel">
@@ -111,6 +122,6 @@
       </button>
     </div>
 
-    <script type="module" src="assets/js/seats.js?v=20260704b"></script>
+    <script type="module" src="assets/js/seats.js?v=20260704d"></script>
   </body>
 </html>
