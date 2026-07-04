@@ -11,20 +11,19 @@ import {
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
-const headers = () => ({
+const headers = (extra = {}) => ({
   "Content-Type": "application/json",
   "apikey": SUPABASE_ANON_KEY,
   "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+  ...extra,
 });
+
+// PostgREST는 기본적으로 PATCH/DELETE 성공 시 204(빈 응답)만 반환한다.
+// 실제로 몇 행이 바뀌었는지 확인하려면 이 헤더로 변경된 행을 응답 본문에 포함시켜야 한다.
+const returnRepresentation = () => headers({ Prefer: "return=representation" });
 
 function toMember(row) {
   return { 회원ID: String(row.ID), 이름: row.Name, 학년반: row.Division };
-}
-
-function encodeFilter(col, op, val) {
-  if (op === "eq") return `${col}=eq.${encodeURIComponent(val)}`;
-  if (op === "in") return `${col}=in.(${val.join(",")})`;
-  return `${col}=${op}.${encodeURIComponent(val)}`;
 }
 
 export async function apiGet(action, params = {}) {
@@ -115,7 +114,7 @@ async function getSeats(time) {
   if (!time) return { seats: {} };
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/Log?select=ID,Name,Division,Seat,Time&"Time"=eq.${encodeURIComponent(time)}`,
+      `${SUPABASE_URL}/rest/v1/Log?select=ID,Name,Division,Seat,Time&Time=eq.${encodeURIComponent(time)}`,
       { headers: headers() }
     );
     const data = await res.json();
@@ -155,15 +154,15 @@ async function checkin(body) {
 
     if (res.status === 201) return { success: true };
 
-    const data = await res.json();
     if (res.status === 409) {
       const existing = await fetch(
-        `${SUPABASE_URL}/rest/v1/Log?select=Seat&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+        `${SUPABASE_URL}/rest/v1/Log?select=Seat&ID=eq.${Number(memberId)}&Time=eq.${encodeURIComponent(time)}`,
         { headers: headers() }
       ).then(r => r.json());
       if (existing && existing.length) return { success: false, error: `이미 체크인되었습니다 (좌석 ${existing[0].Seat})` };
       return { success: false, error: "이미 배정된 좌석입니다: " + seat };
     }
+    const data = await res.json().catch(() => ({}));
     return { success: false, error: data.message || "체크인에 실패했습니다" };
   } catch (e) {
     return { success: false, error: "네트워크 오류: " + e.message };
@@ -180,10 +179,10 @@ async function moveSeat(body) {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/Log?select=*&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+      `${SUPABASE_URL}/rest/v1/Log?select=*&ID=eq.${Number(memberId)}&Time=eq.${encodeURIComponent(time)}`,
       {
         method: "PATCH",
-        headers: headers(),
+        headers: returnRepresentation(),
         body: JSON.stringify({
           "Seat": newSeat,
           "Timestamp": new Date().toISOString(),
@@ -192,8 +191,8 @@ async function moveSeat(body) {
     );
 
     if (res.status === 409) return { success: false, error: "이미 배정된 좌석입니다: " + newSeat };
-    if (res.status !== 200 && res.status !== 204) {
-      const data = await res.json();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
       return { success: false, error: data.message || "자리 이동에 실패했습니다" };
     }
 
@@ -214,15 +213,15 @@ async function cancelCheckin(body) {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/Log?select=*&"ID"=eq.${Number(memberId)}&"Time"=eq.${encodeURIComponent(time)}`,
+      `${SUPABASE_URL}/rest/v1/Log?select=*&ID=eq.${Number(memberId)}&Time=eq.${encodeURIComponent(time)}`,
       {
         method: "DELETE",
-        headers: headers(),
+        headers: returnRepresentation(),
       }
     );
 
-    if (res.status !== 200 && res.status !== 204) {
-      const data = await res.json();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
       return { success: false, error: data.message || "체크인 취소에 실패했습니다" };
     }
 
