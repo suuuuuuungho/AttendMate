@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704g";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704h";
 import {
   mockGetMember,
   mockSearchMembers,
@@ -7,7 +7,7 @@ import {
   mockCheckin,
   mockMoveSeat,
   mockCancelCheckin,
-} from "./mock.js?v=20260704g";
+} from "./mock.js?v=20260704h";
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
@@ -140,7 +140,7 @@ async function searchMembers(q) {
 
 async function getAllMembers() {
   try {
-    const data = await fetchAllRows(`/rest/v1/Member?select=ID,Name,Division`);
+    const data = await fetchAllRows(`/rest/v1/Member?select=ID,Name,Division&order=Division.asc,Name.asc`);
     return { members: data.map(toMember) };
   } catch (e) {
     return { members: [] };
