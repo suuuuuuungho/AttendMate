@@ -29,10 +29,12 @@ export function abbreviateClass(cls) {
  * 학년반 원문에서 학년 그룹을 뽑아낸다. 좌석 배경색을 학년별로 다르게 칠하는 데 쓴다.
  * 순서가 중요하다 — "신입"/"장기섬김"이 "학년" 숫자보다 먼저 매칭되어야 한다.
  */
+// 학년반 원문은 두 형식이 섞여 있다: 목업/구글시트의 "중등부 1학년 1-1반"과
+// 실제 Supabase Member 데이터의 "1-1반"(학년 접두어 없이 숫자-반 형식). 둘 다 매칭한다.
 export const GRADE_GROUPS = [
-  { key: "grade1", label: "1학년", match: /1학년/, cssVar: "--color-grade-1" },
-  { key: "grade2", label: "2학년", match: /2학년/, cssVar: "--color-grade-2" },
-  { key: "grade3", label: "3학년", match: /3학년/, cssVar: "--color-grade-3" },
+  { key: "grade1", label: "1학년", match: /1학년|^1-\d/, cssVar: "--color-grade-1" },
+  { key: "grade2", label: "2학년", match: /2학년|^2-\d/, cssVar: "--color-grade-2" },
+  { key: "grade3", label: "3학년", match: /3학년|^3-\d/, cssVar: "--color-grade-3" },
   { key: "new", label: "신입반", match: /신입/, cssVar: "--color-grade-new" },
   { key: "longterm", label: "장기섬김", match: /장기섬김/, cssVar: "--color-grade-longterm" },
 ];

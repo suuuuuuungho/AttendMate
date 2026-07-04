@@ -1,5 +1,5 @@
-// Apps Script 배포 전, 로컬 프리뷰에서 UI를 확인하기 위한 목업 데이터/동작.
-// config.js의 APPS_SCRIPT_URL이 비어있을 때 api.js가 이 모듈을 대신 사용한다.
+// Supabase 접속 정보 없이 로컬 프리뷰에서 UI를 확인하기 위한 목업 데이터/동작.
+// config.js의 SUPABASE_URL/SUPABASE_ANON_KEY가 비어있을 때 api.js가 이 모듈을 대신 사용한다.
 
 // 학년반 표기는 실제 시트 형식("중등부 N학년 x-y반" / "신입x반" / "장기섬김...")과
 // 동일하게 맞춘다 — seat-map.js의 GRADE_GROUPS 정규식이 이 형식을 전제로 매칭한다.

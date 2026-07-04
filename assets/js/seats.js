@@ -1,5 +1,5 @@
 import { TIMES } from "./config.js";
-import { apiGet, apiPost } from "./api.js";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js";
 import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js";
 import { renderTimeTabs } from "./time-tabs.js";
 
@@ -88,7 +88,7 @@ function rerenderSeats() {
 }
 
 /**
- * 배정/이동/취소는 Apps Script 왕복(보통 1~3초, 가끔 더 걸림) 때문에 기다리는 동안
+ * 배정/이동/취소는 네트워크 왕복 때문에 기다리는 동안
  * "아무 반응이 없다"는 인상을 준다. 그래서 화면은 낙관적으로 바로 갱신해 즉시
  * 반응하는 것처럼 보이게 하고, 이 토스트로 실제 처리 중/완료/실패 상태를 알려준다.
  * 실패하면 호출부에서 낙관적으로 바꿔둔 상태를 되돌린다.
@@ -577,3 +577,5 @@ refreshTabs();
 rerenderSeats(); // 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다
 loadSeats();
 setInterval(loadSeats, 15000);
+// 다른 사용자의 배정/이동/취소를 폴링 없이 즉시 반영 (15초 폴링은 안전망으로 유지).
+subscribeToSeatChanges(() => loadSeats());

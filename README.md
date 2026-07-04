@@ -12,19 +12,18 @@ assets/css/tokens.css          디자인 토큰 (색상 · 타이포 · spacing 
 assets/css/base.css            리셋 + 타이포그래피 유틸 클래스
 assets/css/components.css      버튼 · 네비 · 검색창 컴포넌트
 assets/css/seatmap.css         좌석 그리드 · 타임 탭 · 모달 · 토스트
-assets/js/config.js            Apps Script 웹앱 URL, 타임 목록
-assets/js/api.js               Apps Script 호출 래퍼 (URL 없으면 mock.js로 자동 대체)
+assets/js/config.js            Supabase URL/anon key, 타임 목록
+assets/js/api.js               Supabase 호출 래퍼 (URL/key 없으면 mock.js로 자동 대체)
 assets/js/mock.js              로컬 프리뷰용 목업 데이터
 assets/js/seat-map.js          8구역 640석 그리드 렌더러
 assets/js/time-tabs.js         타임 선택 pill 탭 렌더러
-assets/js/seats.js             index.html 페이지 로직 (검색/배정/폴링)
-apps-script/                   Google Apps Script 백엔드 + 배포 가이드
+assets/js/seats.js             index.html 페이지 로직 (검색/배정/폴링/실시간 구독)
 DESIGN.md                      디자인 규칙 문서
 ```
 
 ## 백엔드
 
-구글 스프레드시트(학생 명단 + 출석 log 탭)를 Apps Script Web App으로 감싼 백엔드를 쓴다. 배포·재배포 방법은 [apps-script/SETUP.md](apps-script/SETUP.md) 참고.
+Supabase(Postgres)의 `Member`(명단), `Log`(출석 기록) 테이블을 브라우저에서 직접 호출한다 (RLS 비활성화, anon/publishable key 사용). Log 테이블 변경은 Realtime 구독으로 즉시 반영되고, 15초 폴링이 안전망으로 함께 동작한다. 최초 설정(제약/RLS/Realtime)은 [supabase-setup.sql](supabase-setup.sql) 참고.
 
 ## 로컬 미리보기
 
@@ -33,7 +32,7 @@ python -m http.server 8080
 # http://localhost:8080 접속
 ```
 
-`assets/js/config.js`의 `APPS_SCRIPT_URL`이 비어있으면 `mock.js`의 목업 데이터로 자동 동작한다.
+`assets/js/config.js`의 `SUPABASE_URL`/`SUPABASE_ANON_KEY`가 비어있으면 `mock.js`의 목업 데이터로 자동 동작한다.
 
 ## GitHub Pages 배포
 

@@ -3,4 +3,3 @@ Thumbs.db
 node_modules/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
-apps-script/.clasp-sync/
