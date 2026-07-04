@@ -12,6 +12,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8090", "--directory", "../AttendMate_Stat"],
       "port": 8090
+    },
+    {
+      "name": "static-site-admin",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8100", "--directory", "../AttendMate_Admin"],
+      "port": 8100
     }
   ]
 }

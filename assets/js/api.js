@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704f";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260704g";
 import {
   mockGetMember,
   mockSearchMembers,
@@ -7,7 +7,7 @@ import {
   mockCheckin,
   mockMoveSeat,
   mockCancelCheckin,
-} from "./mock.js?v=20260704f";
+} from "./mock.js?v=20260704g";
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
@@ -53,7 +53,26 @@ export async function apiGet(action, params = {}) {
   if (action === "searchMembers") return searchMembers(params.q);
   if (action === "getAllMembers") return getAllMembers();
   if (action === "getSeats") return getSeats(params.time);
+  if (action === "getActiveTimes") return getActiveTimes();
   return { error: "알 수 없는 action: " + action };
+}
+
+/**
+ * AttendMate_Admin의 Control Panel이 관리하는 타임 활성화 상태.
+ * TimeControl 테이블이 아직 없거나 조회에 실패하면 null을 반환해 "제어 없음"으로
+ * 취급한다 (기존처럼 모든 타임을 그대로 노출) — 관리 기능이 없어도 앱이 깨지면 안 된다.
+ */
+async function getActiveTimes() {
+  if (USE_MOCK) return { activeTimes: null };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/TimeControl?select=Time,Active`, { headers: headers() });
+    if (!res.ok) return { activeTimes: null };
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return { activeTimes: null };
+    return { activeTimes: data.filter((r) => r.Active).map((r) => r.Time) };
+  } catch (e) {
+    return { activeTimes: null };
+  }
 }
 
 export async function apiPost(action, body) {

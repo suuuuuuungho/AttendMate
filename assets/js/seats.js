@@ -1,8 +1,8 @@
-import { TIMES } from "./config.js?v=20260704f";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260704f";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260704f";
-import { renderTimeTabs } from "./time-tabs.js?v=20260704f";
-import { initAppSwitcher } from "./app-switcher.js?v=20260704f";
+import { TIMES } from "./config.js?v=20260704g";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260704g";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260704g";
+import { renderTimeTabs } from "./time-tabs.js?v=20260704g";
+import { initAppSwitcher } from "./app-switcher.js?v=20260704g";
 
 initAppSwitcher();
 
@@ -39,6 +39,7 @@ const locateResultsEl = document.getElementById("locateResults");
 
 const MAX_SEARCH_RESULTS = 20;
 
+let activeTimes = TIMES; // Control Panel이 관리하는 활성 타임 목록 — 로드 전까지는 전체를 그대로 노출
 let currentTime = TIMES[0];
 let currentSeats = {};
 let pendingSeatId = null;
@@ -77,12 +78,31 @@ function renderGradeLegend() {
 }
 
 function refreshTabs() {
-  renderTimeTabs(timeTabsEl, TIMES, currentTime, (time) => {
+  renderTimeTabs(timeTabsEl, activeTimes, currentTime, (time) => {
     currentTime = time;
     exitMoveMode(); // 다른 타임의 좌석으로 이동해버리는 사고 방지
     refreshTabs();
     loadSeats();
   });
+}
+
+/**
+ * AttendMate_Admin의 Control Panel에서 비활성화한 타임은 드롭다운에서 아예 뺀다.
+ * TimeControl 테이블이 없으면(res.activeTimes === null) 제어 없음으로 보고 전체를 노출한다.
+ */
+async function refreshActiveTimes() {
+  const res = await apiGet("getActiveTimes");
+  const next = res.activeTimes && res.activeTimes.length ? TIMES.filter((t) => res.activeTimes.includes(t)) : TIMES;
+  const changed = next.join(",") !== activeTimes.join(",");
+  activeTimes = next;
+  if (!activeTimes.includes(currentTime)) {
+    currentTime = activeTimes[0] || TIMES[0];
+    exitMoveMode();
+    refreshTabs();
+    loadSeats();
+  } else if (changed) {
+    refreshTabs();
+  }
 }
 
 /**
@@ -638,6 +658,8 @@ membersReady.then(populateFilterSelect);
 refreshTabs();
 rerenderSeats(); // 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다
 loadSeats();
+refreshActiveTimes();
 setInterval(loadSeats, 15000);
+setInterval(refreshActiveTimes, 15000);
 // 다른 사용자의 배정/이동/취소를 폴링 없이 즉시 반영 (15초 폴링은 안전망으로 유지).
 subscribeToSeatChanges(() => loadSeats());
