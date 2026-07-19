@@ -424,21 +424,45 @@
   padding: var(--space-sm) var(--space-md);
   background: var(--color-canvas);
 }
+/* 칩은 두 클릭 영역(이름 = 이동 모드 진입 / × = 삭제)을 가진 래퍼라 버튼이 아닌
+   span이고, 안쪽 두 버튼이 각각 pill의 왼쪽/오른쪽을 나눠 갖는다. */
 .unassigned-chip {
   display: inline-flex;
-  align-items: center;
+  align-items: stretch;
   border: 1px solid var(--grade-color, var(--color-hairline));
   border-radius: var(--radius-pill);
   background: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-text);
-  font-size: var(--type-caption-size);
-  padding: 7px 14px;
+  overflow: hidden;
   transition: transform var(--transition-fast), background var(--transition-fast);
 }
-.unassigned-chip:hover { background: var(--color-canvas-parchment); }
 .unassigned-chip:active { transform: var(--press-scale); }
 .unassigned-chip--move-source {
   background: var(--grade-color, var(--color-primary-focus));
   box-shadow: 0 0 0 2px var(--color-primary-focus);
 }
+.unassigned-chip__label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-ink);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  padding: 7px 8px 7px 14px;
+  transition: background var(--transition-fast);
+}
+.unassigned-chip__label:hover { background: var(--color-canvas-parchment); }
+.unassigned-chip--move-source .unassigned-chip__label { color: var(--color-on-primary); }
+.unassigned-chip--move-source .unassigned-chip__label:hover { background: transparent; }
+.unassigned-chip__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  color: var(--color-ink-muted-48);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 12px 0 2px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.unassigned-chip__delete:hover { color: var(--color-ink); background: var(--color-hairline-a); }
+.unassigned-chip--move-source .unassigned-chip__delete { color: rgba(255, 255, 255, 0.7); }
+.unassigned-chip--move-source .unassigned-chip__delete:hover { color: var(--color-on-primary); background: rgba(255, 255, 255, 0.16); }

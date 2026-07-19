@@ -1,8 +1,8 @@
-import { TIMES } from "./config.js?v=20260719b";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260719b";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260719b";
-import { renderTimeTabs } from "./time-tabs.js?v=20260719b";
-import { initAppSwitcher } from "./app-switcher.js?v=20260719b";
+import { TIMES } from "./config.js?v=20260719c";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260719c";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260719c";
+import { renderTimeTabs } from "./time-tabs.js?v=20260719c";
+import { initAppSwitcher } from "./app-switcher.js?v=20260719c";
 
 initAppSwitcher();
 
@@ -145,12 +145,27 @@ function renderUnassignedPanel() {
     const chips = document.createElement("div");
     chips.className = "unassigned-grade__chips";
     for (const [seatId, occ] of members) {
-      const chip = document.createElement("button");
-      chip.type = "button";
+      const chip = document.createElement("span");
       chip.className = "unassigned-chip";
       if (moveSource && moveSource.seatId === seatId) chip.classList.add("unassigned-chip--move-source");
-      chip.textContent = `${occ.이름} · ${abbreviateClass(occ.학년반)}`;
-      chip.addEventListener("click", () => startAssignFromUnassigned(seatId, occ));
+
+      const labelBtn = document.createElement("button");
+      labelBtn.type = "button";
+      labelBtn.className = "unassigned-chip__label";
+      labelBtn.textContent = `${occ.이름} · ${abbreviateClass(occ.학년반)}`;
+      labelBtn.addEventListener("click", () => startAssignFromUnassigned(seatId, occ));
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "unassigned-chip__delete";
+      deleteBtn.setAttribute("aria-label", `${occ.이름} 미배정 목록에서 삭제`);
+      deleteBtn.textContent = "×";
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteUnassigned(seatId, occ);
+      });
+
+      chip.append(labelBtn, deleteBtn);
       chips.appendChild(chip);
     }
     groupEl.appendChild(chips);
@@ -165,6 +180,40 @@ function startAssignFromUnassigned(seatId, occupant) {
   moveBanner.style.display = "flex";
   markMoveSource();
   renderUnassignedPanel();
+}
+
+/**
+ * 미배정 목록에서 통째로 삭제 — 출석 기록 자체(cancelCheckin과 동일한 Log 행)를
+ * 지운다. 통계 페이지도 같은 Log를 읽으므로 삭제 즉시 출석 카운트에서도 빠진다.
+ */
+async function deleteUnassigned(seatId, occupant) {
+  if (!confirm(`${occupant.이름}님을 미배정 목록에서 삭제할까요?\n출석 기록이 취소되고 통계에서도 빠집니다.`)) return;
+  if (moveSource && moveSource.seatId === seatId) exitMoveMode(); // 삭제 대상이 이동 중이었다면 모드부터 해제
+
+  const prevSeats = currentSeats;
+  const next = { ...currentSeats };
+  delete next[seatId];
+  currentSeats = next;
+  rerenderSeats();
+
+  const toast = showProcessingToast("삭제 처리 중입니다...");
+  pendingMutationCount++;
+  try {
+    const res = await apiPost("cancelCheckin", { 회원ID: occupant.회원ID, 타임: currentTime });
+    if (res.success) {
+      toast.complete(`${occupant.이름}님을 미배정 목록에서 삭제했습니다`);
+    } else {
+      currentSeats = prevSeats;
+      rerenderSeats();
+      toast.fail(res.error || "삭제에 실패했습니다.");
+    }
+  } catch (e) {
+    currentSeats = prevSeats;
+    rerenderSeats();
+    toast.fail("네트워크 오류로 삭제에 실패했습니다.");
+  } finally {
+    pendingMutationCount--;
+  }
 }
 
 /**
