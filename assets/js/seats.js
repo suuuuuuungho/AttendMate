@@ -1,8 +1,8 @@
-import { TIMES } from "./config.js?v=20260719a";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260719a";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260719a";
-import { renderTimeTabs } from "./time-tabs.js?v=20260719a";
-import { initAppSwitcher } from "./app-switcher.js?v=20260719a";
+import { TIMES } from "./config.js?v=20260719b";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260719b";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260719b";
+import { renderTimeTabs } from "./time-tabs.js?v=20260719b";
+import { initAppSwitcher } from "./app-switcher.js?v=20260719b";
 
 initAppSwitcher();
 
@@ -473,25 +473,47 @@ function moveActiveResult(delta) {
   assignResults.children[activeResultIndex]?.scrollIntoView({ block: "nearest" });
 }
 
+/** 이미 "출석했지만 미배정" 상태(UNASSIGNED-* 좌석)인 학생인지 찾는다. */
+function findUnassignedSeatForMember(memberId) {
+  for (const [seatId, occ] of Object.entries(currentSeats)) {
+    if (seatId.startsWith(UNASSIGNED_SEAT_PREFIX) && occ.회원ID === memberId) return seatId;
+  }
+  return null;
+}
+
+/**
+ * 빈 좌석을 클릭해 학생을 검색·선택하는 흐름. 그 학생이 이미 "출석했지만 미배정"
+ * 목록에 있는 경우, 신규 체크인(checkin)을 시도하면 이미 그 타임에 체크인된
+ * 회원이라 서버가 거부한다 — 그래서 이 경우는 자리 이동(moveSeat)으로 대신 처리해
+ * UNASSIGNED 항목을 실제 좌석으로 옮긴다. (칩을 먼저 클릭해 이동 모드로 들어가는
+ * 기존 흐름과 결과는 동일하고, 진입 경로만 다르다.)
+ */
 async function assignMember(member) {
   const seatId = pendingSeatId;
   closeAssignModal();
 
+  const unassignedSeatId = findUnassignedSeatForMember(member.회원ID);
+
   // 낙관적 업데이트: 서버 응답을 기다리지 않고 화면부터 배정 처리해 즉시 반응하게 한다.
   const prevSeats = currentSeats;
-  currentSeats = { ...currentSeats, [seatId]: { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 } };
+  const next = { ...currentSeats };
+  if (unassignedSeatId) delete next[unassignedSeatId];
+  next[seatId] = { 회원ID: member.회원ID, 이름: member.이름, 학년반: member.학년반 };
+  currentSeats = next;
   rerenderSeats();
 
   const toast = showProcessingToast("배정 처리 중입니다...");
   pendingMutationCount++;
   try {
-    const res = await apiPost("checkin", {
-      회원ID: member.회원ID,
-      이름: member.이름,
-      학년반: member.학년반,
-      좌석: seatId,
-      타임: currentTime,
-    });
+    const res = unassignedSeatId
+      ? await apiPost("moveSeat", { 회원ID: member.회원ID, 타임: currentTime, 좌석: seatId })
+      : await apiPost("checkin", {
+          회원ID: member.회원ID,
+          이름: member.이름,
+          학년반: member.학년반,
+          좌석: seatId,
+          타임: currentTime,
+        });
     if (res.success) {
       toast.complete(`${member.이름}님 ${seatId} 배정 완료했습니다`);
     } else {
