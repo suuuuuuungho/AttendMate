@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260726a";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20260726b";
 import {
   mockGetMember,
   mockSearchMembers,
@@ -7,7 +7,7 @@ import {
   mockCheckin,
   mockMoveSeat,
   mockCancelCheckin,
-} from "./mock.js?v=20260726a";
+} from "./mock.js?v=20260726b";
 
 const USE_MOCK = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 
