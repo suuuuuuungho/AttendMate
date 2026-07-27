@@ -42,10 +42,7 @@ ${status}`;
 
 ${time}성회
 중등부 ${abbreviateClass(division)} ${name}
-${actionLabel}하였습니다.
-
-※착석 현황 보기
-https://buly.kr/6Mu4kbd`;
+${actionLabel}하였습니다.`;
 }
 
 Deno.serve(async (req) => {
