@@ -26,10 +26,10 @@ function abbreviateClass(division: string): string {
   return parts[parts.length - 1];
 }
 
-// "등록"은 성회 출석이 아니라 도착 등록이라 문구 자체를 다르게 쓴다 — 출석/출석취소가
+// "첫 날 접수"는 성회 출석이 아니라 도착 등록이라 문구 자체를 다르게 쓴다 — 출석/출석취소가
 // 아니라 등록/등록취소, 특정 성회 회차("{time}성회")도 없으니 그 줄은 아예 뺀다.
 function buildMessage(event: string, time: string, division: string, name: string): string {
-  const isRegistration = time === "등록";
+  const isRegistration = time === "첫 날 접수";
   const actionLabel = isRegistration
     ? event === "checkin" ? "등록" : "등록취소"
     : event === "checkin" ? "출석" : "출석취소";
