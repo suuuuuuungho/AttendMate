@@ -1,10 +1,43 @@
-import { TIMES } from "./config.js?v=20260726c";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260726c";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260726c";
-import { renderTimeTabs } from "./time-tabs.js?v=20260726c";
-import { initAppSwitcher } from "./app-switcher.js?v=20260726c";
+import { TIMES } from "./config.js?v=20260727a";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260727a";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260727a";
+import { renderTimeTabs } from "./time-tabs.js?v=20260727a";
+import { initAppSwitcher } from "./app-switcher.js?v=20260727a";
 
 initAppSwitcher();
+
+/* ===================== 비밀번호 게이트 =====================
+ * 한 번 통과하면 다시 묻지 않도록 localStorage에 남긴다(브라우저를 새로 열어도 유지). */
+const passwordGateEl = document.getElementById("passwordGate");
+const appRootEl = document.getElementById("appRoot");
+const passwordInput = document.getElementById("passwordInput");
+const passwordError = document.getElementById("passwordError");
+const passwordSubmitBtn = document.getElementById("passwordSubmitBtn");
+
+const SEAT_PASSWORD = "11";
+const AUTH_KEY = "attendmate_seatmap_authed";
+
+function unlock() {
+  localStorage.setItem(AUTH_KEY, "1");
+  passwordGateEl.style.display = "none";
+  appRootEl.style.display = "block";
+  initSeats();
+}
+
+function tryPassword() {
+  if (passwordInput.value === SEAT_PASSWORD) {
+    unlock();
+  } else {
+    passwordError.style.display = "block";
+    passwordInput.value = "";
+    passwordInput.focus();
+  }
+}
+
+passwordSubmitBtn.addEventListener("click", tryPassword);
+passwordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tryPassword();
+});
 
 const timeTabsEl = document.getElementById("timeTabs");
 const seatMapEl = document.getElementById("seatMap");
@@ -58,7 +91,7 @@ async function loadAllMembers() {
   allMembers = res.members || [];
 }
 
-const membersReady = loadAllMembers();
+let membersReady;
 
 /** 좌석 배경색만 봐서는 어떤 색이 어떤 학년인지 알 수 없어서, 색상 범례를 한 번 그려둔다. */
 function renderGradeLegend() {
@@ -723,14 +756,30 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && moveSource) exitMoveMode();
 });
 
-renderGradeLegend();
-populateFilterSelect(); // 반 목록은 명단 로드 후 채워지고, 학년 그룹은 즉시 표시
-membersReady.then(populateFilterSelect);
-refreshTabs();
-rerenderSeats(); // 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다
-loadSeats();
-refreshActiveTimes();
-setInterval(loadSeats, 15000);
-setInterval(refreshActiveTimes, 15000);
-// 다른 사용자의 배정/이동/취소를 폴링 없이 즉시 반영 (15초 폴링은 안전망으로 유지).
-subscribeToSeatChanges(() => loadSeats());
+/* ===================== 초기화(비밀번호 통과 후) ===================== */
+let initialized = false;
+function initSeats() {
+  if (initialized) return;
+  initialized = true;
+  membersReady = loadAllMembers();
+  renderGradeLegend();
+  populateFilterSelect(); // 반 목록은 명단 로드 후 채워지고, 학년 그룹은 즉시 표시
+  membersReady.then(populateFilterSelect);
+  refreshTabs();
+  rerenderSeats(); // 좌석 상태를 아직 모를 때도 즉시 빈 좌석판을 그려서 "로딩 중" 공백을 없앤다
+  loadSeats();
+  refreshActiveTimes();
+  setInterval(loadSeats, 15000);
+  setInterval(refreshActiveTimes, 15000);
+  // 다른 사용자의 배정/이동/취소를 폴링 없이 즉시 반영 (15초 폴링은 안전망으로 유지).
+  subscribeToSeatChanges(() => loadSeats());
+}
+
+/* ===================== 세션 유지 확인 =====================
+ * 파일 맨 아래에서 해야 한다 — unlock()이 이 시점 이전에 선언된 모든 const를 참조하는데,
+ * 이 체크가 파일 위쪽에 있으면 아직 초기화되지 않은 const에 접근하다 스크립트가 죽는다. */
+if (localStorage.getItem(AUTH_KEY) === "1") {
+  unlock();
+} else {
+  passwordInput.focus();
+}

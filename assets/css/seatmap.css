@@ -1,5 +1,28 @@
 /* AttendMate — 좌석 배치 현황 / QR 체크인 전용 컴포넌트 (Apple 원본에 없는 신규 컴포넌트) */
 
+/* ===================== 비밀번호 게이트 ===================== */
+.password-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-black);
+  padding: var(--space-lg);
+}
+.password-gate__card {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  text-align: center;
+}
+.password-gate__error {
+  color: #ff3b30;
+}
+
 /* 범례 + 좌석 찾기 검색을 글로벌 네비(44px) + 서브내비(52px) 바로 아래에 고정한다 —
    페이지를 스크롤해도 항상 보이도록. */
 .sticky-toolbar {
