@@ -86,9 +86,10 @@ Deno.serve(async (req) => {
         to: parentPhone.replace(/-/g, ""),
         from: sender.replace(/-/g, ""),
         text,
-        // 이미지 없이 텍스트만 보낼 거라 MMS로 갈 일이 없지만, type을 명시해서
-        // 혹시라도 자동판별이 MMS로 잡는 경우를 원천 차단한다.
-        type: "LMS",
+        // type을 강제로 LMS로 지정하면 Solapi가 내부적으로 subject(제목)를 채워야 해서
+        // 본문이 90bytes(한글 45자) 이하인 건도 전부 LMS로 발송되고 있었다(요금 3배).
+        // type을 아예 안 보내면 계정에 이미 켜져 있는 autoTypeDetect가 바이트 수 기준으로
+        // SMS/LMS를 알아서 고른다 — 이미지·파일을 안 보내니 MMS로 잘못 잡힐 일도 없다.
       },
     }),
   });
