@@ -244,7 +244,8 @@
 .seat--grade3 { background: var(--color-grade-3); color: var(--color-grade-text); }
 .seat--new { background: var(--color-grade-new); color: var(--color-grade-text); }
 .seat--longterm { background: var(--color-grade-longterm); color: var(--color-grade-text); }
-.seat--teacher { background: var(--color-grade-teacher); color: var(--color-grade-text); }
+/* 교사만 배경이 검정이라 잉크 텍스트로는 안 읽혀서 흰 글씨로 뒤집는다. */
+.seat--teacher { background: var(--color-grade-teacher); color: #ffffff; }
 .seat--grade-other { background: var(--color-status-taken); color: var(--color-status-taken-text); }
 
 .seat:active { transform: var(--press-scale); }
@@ -440,6 +441,8 @@
   color: var(--color-grade-text);
   font-weight: 600;
 }
+/* 교사 그룹만 검정 배경이라 흰 글씨로 뒤집는다. */
+.unassigned-grade--teacher .unassigned-grade__label { color: #ffffff; }
 .unassigned-grade__chips {
   display: flex;
   flex-wrap: wrap;

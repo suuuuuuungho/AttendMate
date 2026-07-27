@@ -1,8 +1,8 @@
-import { TIMES } from "./config.js?v=20260727b";
-import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260727b";
-import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260727b";
-import { renderTimeTabs } from "./time-tabs.js?v=20260727b";
-import { initAppSwitcher } from "./app-switcher.js?v=20260727b";
+import { TIMES } from "./config.js?v=20260727d";
+import { apiGet, apiPost, subscribeToSeatChanges } from "./api.js?v=20260727d";
+import { renderSeatMap, abbreviateClass, GRADE_GROUPS, getGradeGroup } from "./seat-map.js?v=20260727d";
+import { renderTimeTabs } from "./time-tabs.js?v=20260727d";
+import { initAppSwitcher } from "./app-switcher.js?v=20260727d";
 
 initAppSwitcher();
 
@@ -168,6 +168,7 @@ function renderUnassignedPanel() {
 
     const groupEl = document.createElement("div");
     groupEl.className = "unassigned-grade";
+    if (group.key === "teacher") groupEl.classList.add("unassigned-grade--teacher");
     if (group.cssVar) groupEl.style.setProperty("--grade-color", `var(${group.cssVar})`);
 
     const label = document.createElement("div");

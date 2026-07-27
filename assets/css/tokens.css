@@ -172,7 +172,7 @@
   --color-grade-3: #ffe699;
   --color-grade-new: #a8cff0;
   --color-grade-longterm: #c7cbd1;
-  --color-grade-teacher: #9fe0d0;
+  --color-grade-teacher: #000000;
   --color-grade-text: var(--color-ink);
 
   /* 좌석 찾기 하이라이트 전용 두 번째(이자 마지막) 그림자 예외 — 몇 초간 반짝이다 사라짐 */
