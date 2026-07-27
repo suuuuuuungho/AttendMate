@@ -26,18 +26,22 @@ function abbreviateClass(division: string): string {
   return parts[parts.length - 1];
 }
 
-// "첫 날 접수"는 성회 출석이 아니라 도착 등록이라 문구 자체를 다르게 쓴다 — 출석/출석취소가
-// 아니라 등록/등록취소, 특정 성회 회차("{time}성회")도 없으니 그 줄은 아예 뺀다.
+// "첫 날 접수"는 성회 출석이 아니라 도착 등록이라 문구 전체가 다르다 — 전용 템플릿으로
+// 따로 만든다(성회 회차 줄도, 착석 현황 링크도 없음). 그 외 타임은 기존 형식 그대로.
 function buildMessage(event: string, time: string, division: string, name: string): string {
-  const isRegistration = time === "첫 날 접수";
-  const actionLabel = isRegistration
-    ? event === "checkin" ? "등록" : "등록취소"
-    : event === "checkin" ? "출석" : "출석취소";
-  const header = isRegistration ? "[성회등록알림]" : "[성회출석알림]";
-  const timeLine = isRegistration ? "" : `${time}성회\n`;
-  return `${header}
+  if (time === "첫 날 접수") {
+    const status = event === "checkin" ? "성회 첫 날 접수 되었습니다." : "성회 첫 날 접수가 취소되었습니다.";
+    return `[성회 첫 날 체크인 확인]
 
-${timeLine}중등부 ${abbreviateClass(division)} ${name}
+${abbreviateClass(division)} ${name}
+${status}`;
+  }
+
+  const actionLabel = event === "checkin" ? "출석" : "출석취소";
+  return `[성회출석알림]
+
+${time}성회
+중등부 ${abbreviateClass(division)} ${name}
 ${actionLabel}하였습니다.
 
 ※착석 현황 보기
